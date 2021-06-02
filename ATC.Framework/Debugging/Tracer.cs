@@ -24,7 +24,7 @@ namespace ATC.Framework.Debugging
     {
         #region Fields
 
-        private static List<LogEntry> logEntries = new List<LogEntry>();
+        private static readonly List<LogEntry> logEntries = new List<LogEntry>();
         private static int _consoleWidth = 80;
         private static int _memoryLogEntryMaximum = 4000;
         private static bool _outputCrestronConsole = true;
@@ -218,7 +218,7 @@ namespace ATC.Framework.Debugging
                     // current time
                     if (ShowCurrentTime)
                     {
-                        DateTime dt = DateTimeMilliseconds.Now;
+                        DateTime dt = DateTime.Now;
                         sb.AppendFormat("{0:D2}:{1:D2}:{2:D2}.{3:D3} ", dt.Hour, dt.Minute, dt.Second, dt.Millisecond);
                     }
 

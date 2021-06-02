@@ -60,7 +60,6 @@
     <Compile Include="Communications\Transport.cs" />
     <Compile Include="Communications\UdpServerTransport.cs" />
     <Compile Include="ConfigManager.cs" />
-    <Compile Include="DateTimeMilliseconds.cs" />
     <Compile Include="Debugging\DebugConsoleClient.cs" />
     <Compile Include="Debugging\DebugConsoleMessage.cs" />
     <Compile Include="Debugging\LineType.cs" />
