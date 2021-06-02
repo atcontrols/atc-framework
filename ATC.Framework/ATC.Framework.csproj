@@ -10,6 +10,11 @@
     <RootNamespace>ATC.Framework</RootNamespace>
     <AssemblyName>ATC.Framework</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <PackageId>ATC.Framework</PackageId>
+    <Version>0.6.2</Version>
+    <Authors>Fraser McLean</Authors>
+    <Company>AT Controls</Company>
+    <PackageTags>Crestron;SimplSharp;Framework</PackageTags>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <NuGetPackageImportStamp>
@@ -17,7 +22,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
+    <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
