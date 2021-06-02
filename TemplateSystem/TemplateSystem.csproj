@@ -63,16 +63,16 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Framework\ATC.Framework.csproj">
-      <Project>{733a0599-c5c2-422c-8bfb-85da86bd475e}</Project>
-      <Name>ATC.Framework</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="PanelDesign\Template-Tsw760.sgd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="PanelDesign\Template-Tsw760.vtp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ATC.Framework\ATC.Framework.csproj">
+      <Project>{733a0599-c5c2-422c-8bfb-85da86bd475e}</Project>
+      <Name>ATC.Framework</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
