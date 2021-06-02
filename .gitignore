@@ -361,3 +361,12 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Crestron panel files
+*.sgd
+*.zip
+*.vtz
+*.vtz.hash
+*.asv
+*Core3.hash
+*(iPad).Core3/
