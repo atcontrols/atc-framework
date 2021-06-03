@@ -24,7 +24,7 @@ namespace ATC.Framework.Debugging
         /// <summary>
         /// Port number of the DebugConsole server.
         /// </summary>
-        public static int Port { get; set; }
+        public static int Port { get; set; } = PortDefault;
 
         /// <summary>
         /// Returns true if currently connected to the DebugConsole server.
