@@ -173,10 +173,11 @@ namespace ATC.Framework
         /// <summary>
         /// Output the specified message to console and also write to error log.
         /// </summary>
-        /// <param name="message">The message to log.</param>
+        /// <param name="methodName">The name of the method in which the exception occurred.</param>
         /// <param name="ex">The exception to log.</param>
-        protected void TraceException(string message, Exception ex)
+        protected void TraceException(string methodName, Exception ex)
         {
+            string message = $"{methodName}() exception type: {ex.GetType()}";
             tracer.TraceException(message, ex);
         }
 
