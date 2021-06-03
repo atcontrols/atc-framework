@@ -54,7 +54,7 @@ namespace ATC.Framework.UserInterface
     {
         #region Fields
 
-        private readonly TPanel panel;
+        private readonly TPanel _panel;
         private readonly List<UserInterfaceComponent> components = new List<UserInterfaceComponent>();
         private bool disposed;
 
@@ -73,7 +73,7 @@ namespace ATC.Framework.UserInterface
         /// </summary>
         public bool IsRegistered
         {
-            get { return panel == null ? false : panel.Registered; }
+            get { return Panel != null && Panel.Registered; }
         }
 
         /// <summary>
@@ -81,7 +81,12 @@ namespace ATC.Framework.UserInterface
         /// </summary>
         public bool IsOnline
         {
-            get { return panel == null ? false : panel.IsOnline; }
+            get { return Panel != null && Panel.IsOnline; }
+        }
+
+        public TPanel Panel
+        {
+            get { return _panel;  }
         }
 
         #endregion
@@ -90,7 +95,7 @@ namespace ATC.Framework.UserInterface
 
         public UserInterfaceManager(TPanel panel)
         {
-            this.panel = panel;
+            _panel = panel;
         }
 
         #endregion
@@ -115,11 +120,11 @@ namespace ATC.Framework.UserInterface
         private bool Register(string sgdPath, ISmartObject otherPanel)
         {
             // register panel
-            var response = panel.Register();
+            var response = Panel.Register();
             if (response != eDeviceRegistrationUnRegistrationResponse.Success)
             {
                 TraceError("Register() panel failed to register: " + response);
-                panel.Dispose();
+                Panel.Dispose();
                 return false;
             }
 
@@ -128,16 +133,16 @@ namespace ATC.Framework.UserInterface
             {
                 if (File.Exists(sgdPath))
                 {
-                    panel.LoadSmartObjects(sgdPath);
-                    Trace(string.Format("Register() loaded {0} SmartObjects from file.", panel.SmartObjects.Count));
+                    Panel.LoadSmartObjects(sgdPath);
+                    Trace(string.Format("Register() loaded {0} SmartObjects from file.", Panel.SmartObjects.Count));
                 }
                 else
                     TraceError(string.Format("Register() SGD file: {0} does not exist.", sgdPath));
             }
             else if (otherPanel != null)
             {
-                panel.LoadSmartObjects(otherPanel);
-                Trace(string.Format("Register() loaded {0} SmartObjects from specified panel.", panel.SmartObjects.Count));
+                Panel.LoadSmartObjects(otherPanel);
+                Trace(string.Format("Register() loaded {0} SmartObjects from specified panel.", Panel.SmartObjects.Count));
             }
             else
             {
@@ -145,9 +150,9 @@ namespace ATC.Framework.UserInterface
             }
 
             // add event handlers for smart objects
-            panel.OnlineStatusChange += new OnlineStatusChangeEventHandler(OnlineEventHandler);
-            panel.SigChange += new SigEventHandler(SigChangeHandler);
-            foreach (KeyValuePair<uint, SmartObject> pair in panel.SmartObjects)
+            Panel.OnlineStatusChange += new OnlineStatusChangeEventHandler(OnlineEventHandler);
+            Panel.SigChange += new SigEventHandler(SigChangeHandler);
+            foreach (KeyValuePair<uint, SmartObject> pair in Panel.SmartObjects)
                 pair.Value.SigChange += new SmartObjectSigChangeEventHandler(SmartObjectHandler);
 
             // initialize each component
@@ -163,18 +168,18 @@ namespace ATC.Framework.UserInterface
         public void Dispose()
         {
             // remove event handlers
-            panel.OnlineStatusChange -= OnlineEventHandler;
-            panel.SigChange -= SigChangeHandler;
-            foreach (KeyValuePair<uint, SmartObject> pair in panel.SmartObjects)
+            Panel.OnlineStatusChange -= OnlineEventHandler;
+            Panel.SigChange -= SigChangeHandler;
+            foreach (KeyValuePair<uint, SmartObject> pair in Panel.SmartObjects)
                 pair.Value.SigChange -= SmartObjectHandler;
 
-            var response = panel.UnRegister();
+            var response = Panel.UnRegister();
             if (response == eDeviceRegistrationUnRegistrationResponse.Success)
                 Trace("Dispose() succesfully unregistered panel.");
             else
                 TraceError("Dispose() error occurred while trying to unregister: " + response);
 
-            panel.Dispose();
+            Panel.Dispose();
 
             disposed = true;
         }
@@ -442,7 +447,7 @@ namespace ATC.Framework.UserInterface
         {
             var offsetJoin = new DigitalJoin(join.Number + offset);
             TraceInfo(string.Format("SetJoin() setting join: {0} to value: {1}", offsetJoin, value), TraceLevel.Extended);
-            DigitalJoin.SetJoin(panel, offsetJoin, value);
+            DigitalJoin.SetJoin(Panel, offsetJoin, value);
         }
 
         /// <summary>
@@ -455,7 +460,7 @@ namespace ATC.Framework.UserInterface
         public bool GetJoin(DigitalJoin join, uint offset)
         {
             var offsetJoin = new DigitalJoin(join.Number + offset);
-            return DigitalJoin.GetJoin(panel, offsetJoin);
+            return DigitalJoin.GetJoin(Panel, offsetJoin);
         }
 
         /// <summary>
@@ -466,7 +471,7 @@ namespace ATC.Framework.UserInterface
         public void PulseJoin(DigitalJoin join, uint offset)
         {
             var offsetJoin = new DigitalJoin(join.Number + offset);
-            DigitalJoin.PulseJoin(panel, offsetJoin);
+            DigitalJoin.PulseJoin(Panel, offsetJoin);
         }
 
         /// <summary>
@@ -479,7 +484,7 @@ namespace ATC.Framework.UserInterface
         {
             var offsetJoin = new AnalogJoin(join.Number + offset);
             TraceInfo(string.Format("SetJoin() setting join: {0} to value: {1}", offsetJoin, value), TraceLevel.Extended);
-            AnalogJoin.SetJoin(panel, offsetJoin, value);
+            AnalogJoin.SetJoin(Panel, offsetJoin, value);
         }
 
         /// <summary>
@@ -492,7 +497,7 @@ namespace ATC.Framework.UserInterface
         {
             var offsetJoin = new AnalogJoin(join.Number + offset);
             TraceInfo(string.Format("SetJoin() setting join: {0} to value: {1}", offsetJoin, value), TraceLevel.Extended);
-            AnalogJoin.SetJoin(panel, offsetJoin, (ushort)value);
+            AnalogJoin.SetJoin(Panel, offsetJoin, (ushort)value);
         }
 
         /// <summary>
@@ -504,7 +509,7 @@ namespace ATC.Framework.UserInterface
         public ushort GetJoin(AnalogJoin join, uint offset)
         {
             var offsetJoin = new AnalogJoin(join.Number + offset);
-            return AnalogJoin.GetJoin(panel, offsetJoin);
+            return AnalogJoin.GetJoin(Panel, offsetJoin);
         }
 
         /// <summary>
@@ -517,7 +522,7 @@ namespace ATC.Framework.UserInterface
         {
             var offsetJoin = new SerialJoin(join.Number + offset);
             TraceInfo(string.Format("SetJoin() setting join: {0} to value: {1}", offsetJoin, value), TraceLevel.Extended);
-            SerialJoin.SetJoin(panel, offsetJoin, value);
+            SerialJoin.SetJoin(Panel, offsetJoin, value);
         }
 
         /// <summary>
@@ -529,7 +534,7 @@ namespace ATC.Framework.UserInterface
         public string GetJoin(SerialJoin join, uint offset)
         {
             var offsetJoin = new SerialJoin(join.Number + offset);
-            return SerialJoin.GetJoin(panel, offsetJoin);
+            return SerialJoin.GetJoin(Panel, offsetJoin);
         }
 
         #endregion
@@ -545,9 +550,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemSelected(uint smartObjectId, int index, bool value)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 return SmartObjectMethods.SetSelected(so, index, value);
             }
             else
@@ -566,9 +571,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemEnabled(uint smartObjectId, int index, bool value)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 return SmartObjectMethods.SetEnabled(so, index, value);
             }
             else
@@ -587,9 +592,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemVisible(uint smartObjectId, int index, bool value)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 return SmartObjectMethods.SetVisible(so, index, value);
             }
             else
@@ -607,9 +612,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemCount(uint smartObjectId, int numberOfItems)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 return SmartObjectMethods.SetNumberOfItems(so, numberOfItems);
             }
             else
@@ -628,9 +633,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemText(uint smartObjectId, int index, string value)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 return SmartObjectMethods.SetText(so, index, value);
             }
             else
@@ -649,9 +654,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemValue(uint smartObjectId, string name, bool value)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 return SmartObjectMethods.SetValue(so, name, value);
             }
             else
@@ -670,9 +675,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemValue(uint smartObjectId, string name, ushort value)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 return SmartObjectMethods.SetValue(so, name, value);
             }
             else
@@ -691,9 +696,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemValue(uint smartObjectId, int index, ushort value)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 string name = "an_fb" + index;
                 return SmartObjectMethods.SetValue(so, name, value);
             }
@@ -713,9 +718,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemValue(uint smartObjectId, string name, int value)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 return SmartObjectMethods.SetValue(so, name, value);
             }
             else
@@ -734,9 +739,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemValue(uint smartObjectId, int index, int value)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 string name = "an_fb" + index;
                 return SmartObjectMethods.SetValue(so, name, value);
             }
@@ -756,9 +761,9 @@ namespace ATC.Framework.UserInterface
         /// <returns>True on success / false on fail.</returns>
         public bool SetItemValue(uint smartObjectId, string name, string value)
         {
-            if (panel.SmartObjects.Contains(smartObjectId))
+            if (Panel.SmartObjects.Contains(smartObjectId))
             {
-                SmartObject so = panel.SmartObjects[smartObjectId];
+                SmartObject so = Panel.SmartObjects[smartObjectId];
                 return SmartObjectMethods.SetValue(so, name, value);
             }
             else
