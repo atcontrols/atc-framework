@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace ATC.Framework.Devices
 {
-    public interface IDevice
+    public interface IDevice : ISystemComponent
     {
         /// <summary>
         /// Unique identifier for this device
