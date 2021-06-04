@@ -159,7 +159,7 @@ namespace ATC.Framework.Communications
             // perform autoconnection logic
             if (AutoConnect && ConnectionState == ConnectionState.NotConnected)
                 await ConnectAsync();
-            else  if (client == null)
+            else if (client == null)
             {
                 TraceError("Send() TCP client has not been initialized.");
                 return false;
