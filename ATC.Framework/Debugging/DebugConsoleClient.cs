@@ -46,43 +46,42 @@ namespace ATC.Framework.Debugging
         #endregion
 
         #region Class variables
-        private static UdpServerTransport transport;
+        private static UdpClientTransport transport;
         #endregion
 
         /// <summary>
         /// Instruct the client to connect to the DebugConsole server.
         /// </summary>
         /// <returns>True on success, false on fail.</returns>
-        public static bool Connect()
+        public static void Connect()
         {
             // validate hostname
             if (Hostname == null || Hostname == String.Empty)
             {
                 Tracer.PrintLine("DebugConsoleClient.Connect() error, hostname is invalid.");
-                return false;
+                return;
             }
 
             // validate port
             if (Port == 0)
             {
                 Tracer.PrintLine("DebugConsoleClient.Connect() error, port is invalid.");
-                return false;
+                return;
             }
 
             if (transport == null)
             {
-                transport = new UdpServerTransport(Hostname, Port);
+                transport = new UdpClientTransport(Hostname, Port);
 
                 // add event callback handlers
                 transport.ConnectionStateCallback += new EventHandler<ConnectionStateEventArgs>(TransportConnectionStateCallback);
                 transport.ResponseReceivedCallback += new EventHandler<ResponseReceivedEventArgs>(TransportResponseReceivedCallback);
-
-                return transport.Connect();
+                
             }
             else
             {
                 Tracer.PrintLine("DebugConsoleClient.Connect() called but transport is not null.");
-                return false;
+                return;
             }
         }
 
@@ -100,11 +99,11 @@ namespace ATC.Framework.Debugging
             }
         }
 
-        public static bool Send(Category messageType, string componentName, string message)
+        public static void Send(Category messageType, string componentName, string message)
         {
             // check that we're connected
             if (!Connected)
-                return false;
+                return;
 
             // replace { and } so that DebugConsole can render message
             if (message.Contains("{") || message.Contains("}"))
@@ -119,7 +118,7 @@ namespace ATC.Framework.Debugging
 
             // convert object to string and send
             string jsonString = DebugConsoleMessage.EncodeToJson(dcm);
-            return transport.Send(jsonString);
+            transport.Send(jsonString);
         }
 
         #region Transport event handlers

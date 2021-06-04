@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ATC.Framework.Communications
 {
@@ -7,20 +8,32 @@ namespace ATC.Framework.Communications
     {
         #region Fields
 
-        private Encoding _encoding = Encoding.GetEncoding("ISO-8859-1");
         private StringBuilder responseBuffer;
+        private ConnectionState _connectionState;
 
         #endregion
 
         #region Constants
 
-        const int ResponseBufferCapacity = 4096;
+        private const int ResponseBufferCapacity = 4096;
 
         #endregion
 
         #region Properties
 
-        public ConnectionState ConnectionState { get; private set; }
+        public ConnectionState ConnectionState
+        {
+            get { return _connectionState; }
+            protected set
+            {
+                if (_connectionState != value)
+                {
+                    _connectionState = value;
+                    Trace($"ConnectionState set to: {value}");
+                    RaiseConnectionStateEvent(value);
+                }
+            }
+        }
 
         /// <summary>
         /// If this is not an empty string, then ReceiveDataCallback will only be invoked when the specified delimeter is detected.
@@ -31,11 +44,7 @@ namespace ATC.Framework.Communications
         /// <summary>
         /// The text encoding to use for this transport.
         /// </summary>
-        public Encoding Encoding
-        {
-            get { return _encoding; }
-            set { _encoding = value; }
-        }
+        public Encoding Encoding { get; set; } = Encoding.GetEncoding("ISO-8859-1");
 
         #endregion
 
@@ -52,20 +61,20 @@ namespace ATC.Framework.Communications
         /// Instruct the transport to connect.
         /// </summary>
         /// <returns>True on success, false on fail.</returns>
-        public abstract bool Connect();
+        public abstract void Connect();
 
         /// <summary>
         /// Instruct the transport to disconnect.
         /// </summary>
         /// <returns>True on success, false on fail.</returns>
-        public abstract bool Disconnect();
+        public abstract void Disconnect();
 
         /// <summary>
         /// Send the specified string via the transport.
         /// </summary>
         /// <param name="s">The string to send.</param>
         /// <returns>True on success, false on fail.</returns>
-        public abstract bool Send(string s);
+        public abstract void Send(string s);
 
         #endregion
 
@@ -76,54 +85,12 @@ namespace ATC.Framework.Communications
         /// </summary>
         public event EventHandler<ConnectionStateEventArgs> ConnectionStateCallback;
 
-        /// <summary>
-        /// Updates the Connected property in the Transport object and invokes the event callback.
-        /// </summary>
-        /// <param name="eConnectionState">The new state to set.</param>
         protected void RaiseConnectionStateEvent(ConnectionState state)
         {
-            RaiseConnectionStateEvent(new ConnectionStateEventArgs(state));
-        }
-
-        /// <summary>
-        /// Updates the Connected property in the Transport object and invokes the event callback.
-        /// </summary>
-        /// <param name="eConnectionState">The new state to set.</param>
-        /// <param name="message">Optional message to attached to event.</param>
-        protected void RaiseConnectionStateEvent(ConnectionState state, string message)
-        {
-            RaiseConnectionStateEvent(new ConnectionStateEventArgs(state, message));
-        }
-
-        /// <summary>
-        /// Updates the Connected property in the Transport object and invokes the event callback.
-        /// </summary>
-        /// <param name="args">The new state to set.</param>
-        protected void RaiseConnectionStateEvent(ConnectionStateEventArgs args)
-        {
-            try
-            {
-                if (args == null)
-                {
-                    TraceError("RaiseConnectionStateEvent() args cannot be null.");
-                    return;
-                }
-                else if (args.State != ConnectionState)
-                {
-                    // update property
-                    ConnectionState = args.State;
-
-                    // invoke callback
-                    if (ConnectionStateCallback != null)
-                        ConnectionStateCallback(this, args);
-                    else
-                        TraceError("RaiseConnectionStateEvent() ConnectionStateCallback is null.");
-                }
-            }
-            catch (Exception ex)
-            {
-                TraceException("RaiseConnectionStateEvent() exception caught.", ex);
-            }
+            if (ConnectionStateCallback != null)
+                ConnectionStateCallback(this, new ConnectionStateEventArgs() { State = state });
+            else
+                TraceError("RaiseConnectionStateEvent() ConnectionStateCallback is null.");
         }
 
         /// <summary>
@@ -131,41 +98,36 @@ namespace ATC.Framework.Communications
         /// </summary>
         public event EventHandler<ResponseReceivedEventArgs> ResponseReceivedCallback;
 
-        protected void RaiseResponseReceivedEvent(string response)
-        {
-            RaiseResponseReceivedEvent(new ResponseReceivedEventArgs(response));
-        }
-
         /// <summary>
         /// Process the received response looking for any delimeter and invokes the callback method.
         /// </summary>
         /// <param name="args"></param>
-        protected void RaiseResponseReceivedEvent(ResponseReceivedEventArgs args)
+        protected void RaiseResponseReceivedEvent(string response)
         {
             try
             {
                 // skip over empty replies
-                if (args == null)
-                {
-                    TraceError("RaiseResponseReceivedEvent() args cannot be null.");
+                if (string.IsNullOrEmpty(response))
                     return;
-                }
-                else if (args.Response.Length == 0) // zero length response
-                {
-                    Trace("RaiseResponseReceivedEvent() response of 0 length detected. No action taken");
-                    return;
-                }
-                else if (!string.IsNullOrEmpty(Delimeter)) // look for delimeter
-                {
-                    if (responseBuffer == null)
-                    {
-                        responseBuffer = new StringBuilder(args.Response); // create new StringBuilder
-                        responseBuffer.Capacity = ResponseBufferCapacity;
-                    }
-                    else
-                        responseBuffer.Append(args.Response); // add incoming string to buffer
 
-                    Trace(string.Format("RaiseResponseReceivedEvent() looking for delimeter in: \"{0}\"", Utilities.ControlCodeString(responseBuffer.ToString())));
+                if (string.IsNullOrEmpty(Delimeter)) // no delimeter present
+                {
+                    var args = new ResponseReceivedEventArgs() { Response = response };
+                    // invoke response callback
+                    if (ResponseReceivedCallback != null)
+                        ResponseReceivedCallback(this, args);
+                    else
+                        TraceError("RaiseResponseReceivedEvent() ResponseReceivedCallback is null.");
+                }
+                else // look for delimeter
+                {
+                    Trace($"RaiseResponseReceivedEvent() looking for delimeter in: \"{Utilities.ControlCodeString(responseBuffer.ToString())}\"");
+
+                    // add to buffer
+                    if (responseBuffer == null)
+                        responseBuffer = new StringBuilder(response) { Capacity = ResponseBufferCapacity };
+                    else
+                        responseBuffer.Append(response); // add incoming string to buffer
 
                     // process buffer while looking for the delimeter
                     var index = responseBuffer.ToString().IndexOf(Delimeter);
@@ -184,7 +146,7 @@ namespace ATC.Framework.Communications
 
                         // invoke response callback
                         if (ResponseReceivedCallback != null)
-                            ResponseReceivedCallback(this, new ResponseReceivedEventArgs(chunk));
+                            ResponseReceivedCallback(this, new ResponseReceivedEventArgs() { Response = chunk });
                         else
                             TraceError("RaiseResponseReceivedEvent() ResponseReceivedCallback is null.");
 
@@ -197,14 +159,6 @@ namespace ATC.Framework.Communications
                         Trace("RaiseResponseReceivedEvent() delimeter not found in buffer at this stage. Buffer size: " + responseBuffer.Length);
                     else
                         Trace(string.Format("RaiseResponseReceivedEvent() finished processing {0} chunks. Buffer size: {1}", count, responseBuffer.Length));
-                }
-                else // no delimeter present
-                {
-                    // invoke response callback
-                    if (ResponseReceivedCallback != null)
-                        ResponseReceivedCallback(this, args);
-                    else
-                        TraceError("RaiseResponseReceivedEvent() ResponseReceivedCallback is null.");
                 }
             }
             catch (Exception ex)
@@ -231,63 +185,9 @@ namespace ATC.Framework.Communications
 
         ~Transport()
         {
-            Trace("Object destructor called.");
             Dispose(false);
         }
 
         #endregion
     }
-
-    #region Supporting enums and classes
-    public enum ConnectionState
-    {
-        /// <summary>
-        /// Not currently connected.
-        /// </summary>
-        NotConnected,
-
-        /// <summary>
-        /// Connection in progress.
-        /// </summary>
-        Connecting,
-
-        /// <summary>
-        /// Connected and ready to send.
-        /// </summary>
-        Connected,
-
-        /// <summary>
-        /// Error detected while attempting to connect. Check message for details.
-        /// </summary>
-        ErrorConnecting,
-    }
-
-    public class ConnectionStateEventArgs : EventArgs
-    {
-        public ConnectionState State { get; set; }
-        public string Message { get; set; }
-
-        public ConnectionStateEventArgs(ConnectionState state)
-        {
-            State = state;
-            Message = String.Empty;
-        }
-
-        public ConnectionStateEventArgs(ConnectionState state, string message)
-        {
-            State = state;
-            Message = message;
-        }
-    }
-
-    public class ResponseReceivedEventArgs : EventArgs
-    {
-        public string Response { get; set; }
-
-        public ResponseReceivedEventArgs(string response)
-        {
-            Response = response;
-        }
-    }
-    #endregion
 }

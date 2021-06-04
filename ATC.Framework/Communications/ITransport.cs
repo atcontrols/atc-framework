@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace ATC.Framework.Communications
 {
@@ -8,9 +9,9 @@ namespace ATC.Framework.Communications
         ConnectionState ConnectionState { get; }
 
         // public methods
-        bool Connect();
-        bool Disconnect();
-        bool Send(string s);
+        void Connect();
+        void Disconnect();
+        void Send(string s);
 
         // events
         event EventHandler<ConnectionStateEventArgs> ConnectionStateCallback;

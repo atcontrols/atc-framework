@@ -1,27 +1,32 @@
-﻿using Crestron.SimplSharp.CrestronSockets;
-using System;
-using System.Text;
+﻿using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ATC.Framework.Communications
 {
-    public class TcpClientTransport : Transport, IDisposable
+    public class TcpClientTransport : Transport
     {
         #region Fields
 
-        private TCPClient client;
+        private readonly TcpClient client = new TcpClient();
+        private readonly byte[] readBuffer = new byte[4096];
 
-        #endregion
-
-        #region Constants
-        private const int ClientBufferSize = 4096;
         #endregion
 
         #region Properties
+
         public string Hostname { get; set; }
         public int Port { get; set; }
+
         #endregion
 
         #region Constructor
+
+        public TcpClientTransport()
+            : this(default, IPEndPoint.MinPort) { }
+
         public TcpClientTransport(string hostname, int port)
             : base()
         {
@@ -31,210 +36,119 @@ namespace ATC.Framework.Communications
         #endregion
 
         #region Public methods
-        public override bool Connect()
+
+        public override void Connect()
         {
-            // create new client object
-            if (client == null)
+            var (isValid, message) = ValidateProperties();
+            if (!isValid)
             {
-                client = new TCPClient(Hostname, Port, ClientBufferSize);
-                client.SocketStatusChange += new TCPClientSocketStatusChangeEventHandler(ClientSocketStatusChange);
-                Trace("Connect() created new client object.");
+                TraceError($"Connect() {message}");
+                return;
             }
 
-            // check if an existing attempt is in progress
-            if (ConnectionState == ConnectionState.Connecting)
-            {
-                Trace("Connect() an existing attempt to connect is in progress.");
-                return false;
-            }
-
-            // attempt to connect asynchronously
-            if (client.ClientStatus == SocketStatus.SOCKET_STATUS_NO_CONNECT)
-            {
-                Trace("Connect() attempting connection to: " + Hostname + " on port: " + Port);
-                SocketErrorCodes code = client.ConnectToServerAsync(ClientConnectCallback);
-
-                switch (code)
-                {
-                    case SocketErrorCodes.SOCKET_OK:
-                    case SocketErrorCodes.SOCKET_OPERATION_PENDING:
-                        if (ConnectionState == ConnectionState.NotConnected)
-                        {
-                            Trace("Connect() successfully created connection request.");
-                            RaiseConnectionStateEvent(ConnectionState.Connecting);
-                        }
-                        return true;
-
-                    default:
-                        TraceError("Connect() could not create connection request: " + code);
-                        RaiseConnectionStateEvent(new ConnectionStateEventArgs(ConnectionState.ErrorConnecting, "Error connecting: " + code.ToString()));
-                        RaiseConnectionStateEvent(new ConnectionStateEventArgs(ConnectionState.NotConnected));
-                        Reset();
-                        return false;
-                }
-            }
-            else
-            {
-                TraceError("Connect() could not connect. Client status: " + client.ClientStatus);
-                Reset();
-                return false;
-            }
-        }
-
-        public override bool Disconnect()
-        {
             try
             {
-                // H.O. - Fix for TCP sockets staying open to the server, after this method was called.
-                // Updated this method to no longer call return Reset(); here, as it turned out to be disposing the item before the disconnect occurred.  Instead, when a client.DisconnectFromServer() occurs,
-                // ClientSocketStatusChange() is called with a "SocketStatus.SOCKET_STATUS_NO_CONNECT", which then calls the Reset() for us, but only after a disconnect has occurred, which is when we want it to be.
-
-                // disconnect any active connection
-                if (client != null)
+                Trace($"Connect() attempting connection to: {Hostname} on port: {Port}");
+                ConnectionState = ConnectionState.Connecting;
+                client.ConnectAsync(Hostname, Port).ContinueWith((task) =>
                 {
-                    if (client.ClientStatus == SocketStatus.SOCKET_STATUS_CONNECTED)
-                    {
-                        client.DisconnectFromServer();
-                        Trace("Disconnect() disconnect request initiated.");
-                    }
-                }
-
-                return true;
+                    Trace("Connect() connection was successful.");
+                    ConnectionState = ConnectionState.Connected;
+                    _ = ReadStream(client.GetStream());
+                });
             }
             catch (Exception ex)
             {
-                TraceException("Disconnect() exception occurred.", ex);
-                return false;
+                TraceException("Connect() exception caught.", ex);
+                Disconnect();
             }
         }
 
-        public override bool Send(string s)
+        public override void Disconnect()
         {
+            if (client.Connected)
+            {
+                Trace("Disconnect() disconnecting from remote host.");
+                client.Close();
+            }
+
+            client.Dispose();
+            client.GetStream()?.Dispose();
+
+            ConnectionState = ConnectionState.NotConnected;
+        }
+
+        public override void Send(string s)
+        {
+            var stream = client.GetStream();
+
+            if (stream == null || !stream.CanWrite)
+            {
+                TraceError($"Send() network stream is not ready or not writable.");
+                return;
+            }
+
             try
             {
-                if (client == null)
-                {
-                    TraceError("Send() cannot send as client is null.");
-                    return false;
-                }
-                else if (client.ClientStatus == SocketStatus.SOCKET_STATUS_CONNECTED)
-                {
-                    // encode string
-                    byte[] bytes = Encoding.GetBytes(s);
-
-                    // send string to host                   
-                    SocketErrorCodes code = client.SendDataAsync(bytes, bytes.Length, ClientSendCallback);
-                    if (code == SocketErrorCodes.SOCKET_OPERATION_PENDING)
+                byte[] bytes = Encoding.GetBytes(s);
+                Trace($"Send() sending {bytes.Length} bytes, content: \"{s.ToControlCodeString()}\"");
+                stream.WriteAsync(bytes, 0, bytes.Length)
+                    .ContinueWith((task) =>
                     {
-                        Trace("Send() succesfully dispatched asynchronous request.");
-                        return true;
-                    }
-                    else
-                    {
-                        TraceError(String.Format("Send() error occurred while sending, code: {0}", code));
-                        return false;
-                    }
-                }
-                else
-                {
-                    TraceError("Send() cannot send as not connected.");
-                    return false;
-                }
+                        if (task.IsFaulted)
+                            TraceWarning("Send() error encountered while trying to send.");
+                        else
+                            Trace($"Send() completed write of {bytes.Length}");
+                    });
             }
             catch (Exception ex)
             {
                 TraceException("Send() exception caught.", ex);
-                return false;
+                Disconnect();
             }
         }
         #endregion
 
-        #region TCP client event handlers
-        protected virtual void ClientConnectCallback(TCPClient client)
-        {
-            if (client.ClientStatus != SocketStatus.SOCKET_STATUS_CONNECTED)
-            {
-                // raise error connecting event
-                string message = "Could not complete connection: " + client.ClientStatus;
-                RaiseConnectionStateEvent(ConnectionState.ErrorConnecting, message);
+        #region Private methods
 
-                // raise not connected event
-                RaiseConnectionStateEvent(ConnectionState.NotConnected);
-                Reset();
-            }
+        private (bool, string) ValidateProperties()
+        {
+            if (string.IsNullOrEmpty(Hostname))
+                return (false, "Hostname is null or empty.");
+            else if (Port <= IPEndPoint.MinPort || Port > IPEndPoint.MaxPort)
+                return (false, $"Invalid port number: {Port}");
+
+            return (true, string.Empty);
         }
 
-        protected virtual void ClientSendCallback(TCPClient client, int numberOfBytesSent)
-        {
-            Trace(string.Format("ClientSendCallback() sent: {0} bytes successfully.", numberOfBytesSent));
-        }
-
-        protected virtual void ClientSocketStatusChange(TCPClient client, SocketStatus status)
-        {
-            Trace("ClientSocketStatusChange() status: " + status);
-
-            switch (status)
-            {
-                case SocketStatus.SOCKET_STATUS_CONNECTED:
-                    RaiseConnectionStateEvent(ConnectionState.Connected);
-                    client.ReceiveDataAsync(ClientReceiveDataHandler);
-                    break;
-                case SocketStatus.SOCKET_STATUS_NO_CONNECT:
-                    RaiseConnectionStateEvent(ConnectionState.NotConnected);
-                    Reset();
-                    break;
-                default:
-                    TraceWarning("ClientSocketStatusChange() unhandled status: " + status);
-                    break;
-            }
-        }
-
-        protected virtual void ClientReceiveDataHandler(TCPClient client, int bytesReceived)
+        private async Task ReadStream(NetworkStream stream)
         {
             try
             {
-                // decode incoming bytes
-                string data = Encoding.GetString(client.IncomingDataBuffer, 0, bytesReceived);
-                Trace("ClientReceiveDataHandler() received " + bytesReceived + " bytes.");
+                while (stream.CanRead)
+                {
+                    // read string response from stream
+                    int bytesRead = await stream.ReadAsync(readBuffer, 0, readBuffer.Length);
+                    string response = Encoding.GetString(readBuffer, 0, bytesRead);
+                    Trace($"ReadStream() received {bytesRead} bytes, content: \"{response.ToControlCodeString()}\"");
 
-                // raise response received event
-                RaiseResponseReceivedEvent(data);
+                    // raise event
+                    RaiseResponseReceivedEvent(response);
+                }
 
-                // listen for more responses
-                client.ReceiveDataAsync(ClientReceiveDataHandler);
+                TraceError("ReadStream() unable to read from stream.");
+                Disconnect();
             }
             catch (Exception ex)
             {
-                TraceException("ClientReceiveDataHandler() exception occurred.", ex);
+                TraceException("ReadStream() exception caught.", ex);
+                Disconnect();
             }
         }
+
         #endregion
 
         #region Object cleanup
-        protected bool Reset()
-        {
-            try
-            {
-                // reset client
-                if (client != null)
-                {
-                    // disconnect any active connection
-                    if (client.ClientStatus == SocketStatus.SOCKET_STATUS_CONNECTED)
-                        client.DisconnectFromServer();
-
-                    client.Dispose();
-                    client = null;
-                    Trace("Reset() client reset.");
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                TraceException("Reset() exception occurred.", ex);
-                return false;
-            }
-        }
 
         /// <summary>
         /// Free up any unmanaged resources.
@@ -242,17 +156,11 @@ namespace ATC.Framework.Communications
         protected override void Dispose(bool disposing)
         {
             if (disposing)
-                Reset();
+            {
+                Disconnect();
+            }
         }
 
-        /// <summary>
-        /// Object destructor
-        /// </summary>
-        ~TcpClientTransport()
-        {
-            Trace("~TcpClientTransport() object destructor called.");
-            Dispose(false);
-        }
         #endregion
     }
 }

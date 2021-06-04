@@ -49,16 +49,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AnalogJoin.cs" />
-    <Compile Include="Communications\ComPortTransport.cs" />
-    <Compile Include="Communications\HttpRequester.cs" />
+    <Compile Include="Communications\ConnectionState.cs" />
+    <Compile Include="Communications\EventArgs.cs" />
     <Compile Include="Communications\ITransport.cs" />
-    <Compile Include="Communications\QueueTransport.cs" />
-    <Compile Include="Communications\SshClientTransport.cs" />
     <Compile Include="Communications\TcpClientTransport.cs" />
-    <Compile Include="Communications\TcpServerTransport.cs" />
-    <Compile Include="Communications\TelnetTransport.cs" />
     <Compile Include="Communications\Transport.cs" />
-    <Compile Include="Communications\UdpServerTransport.cs" />
+    <Compile Include="Communications\UdpClientTransport.cs" />
     <Compile Include="ConfigManager.cs" />
     <Compile Include="Debugging\DebugConsoleClient.cs" />
     <Compile Include="Debugging\DebugConsoleMessage.cs" />
@@ -73,6 +69,7 @@
     <Compile Include="Devices\DeviceSerializer.cs" />
     <Compile Include="Devices\DisplayDevice.cs" />
     <Compile Include="Devices\IConnectable.cs" />
+    <Compile Include="Devices\IVolumeControl.cs" />
     <Compile Include="Devices\PowerDevice.cs" />
     <Compile Include="Devices\ProjectorDevice.cs" />
     <Compile Include="Devices\ScreenDevice.cs" />
