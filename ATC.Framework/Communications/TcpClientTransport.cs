@@ -23,9 +23,6 @@ namespace ATC.Framework.Communications
 
         #region Constructor
 
-        public TcpClientTransport()
-            : this(default, IPEndPoint.MinPort) { }
-
         public TcpClientTransport(string hostname, int port)
             : base()
         {
