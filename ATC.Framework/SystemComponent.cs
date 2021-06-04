@@ -74,16 +74,6 @@ namespace ATC.Framework
         }
 
         /// <summary>
-        /// Outputs the specified message to the console.
-        /// </summary>
-        /// <param name="message">The message to log.</param>
-        [Obsolete("This method has been replaced with the Trace method.")]
-        protected void TraceConsole(string message)
-        {
-            Trace(message);
-        }
-
-        /// <summary>
         /// Outputs the specified message to the console (if specified level is greater than or equal to component TraceLevel)
         /// </summary>
         /// <param name="message"></param>
