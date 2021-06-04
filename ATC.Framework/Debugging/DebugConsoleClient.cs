@@ -76,7 +76,7 @@ namespace ATC.Framework.Debugging
                 // add event callback handlers
                 transport.ConnectionStateCallback += new EventHandler<ConnectionStateEventArgs>(TransportConnectionStateCallback);
                 transport.ResponseReceivedCallback += new EventHandler<ResponseReceivedEventArgs>(TransportResponseReceivedCallback);
-                
+
             }
             else
             {

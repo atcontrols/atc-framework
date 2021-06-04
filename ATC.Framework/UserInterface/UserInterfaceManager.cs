@@ -86,7 +86,7 @@ namespace ATC.Framework.UserInterface
 
         public TPanel Panel
         {
-            get { return _panel;  }
+            get { return _panel; }
         }
 
         #endregion
