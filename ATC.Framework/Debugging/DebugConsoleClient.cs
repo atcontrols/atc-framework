@@ -5,7 +5,14 @@ namespace ATC.Framework.Debugging
 {
     public static class DebugConsoleClient
     {
+        #region Fields
+
+        private static UdpClientTransport transport;
+
+        #endregion
+
         #region Properties
+
         /// <summary>
         /// The name of the current program to report to the DebugConsole server.
         /// </summary>
@@ -39,15 +46,14 @@ namespace ATC.Framework.Debugging
                     return transport.ConnectionState == ConnectionState.Connected;
             }
         }
+
         #endregion
 
         #region Constants
         public const int PortDefault = 64000;
         #endregion
 
-        #region Class variables
-        private static UdpClientTransport transport;
-        #endregion
+        #region Public methods
 
         /// <summary>
         /// Instruct the client to connect to the DebugConsole server.
@@ -56,7 +62,7 @@ namespace ATC.Framework.Debugging
         public static void Connect()
         {
             // validate hostname
-            if (Hostname == null || Hostname == String.Empty)
+            if (string.IsNullOrEmpty(Hostname))
             {
                 Tracer.PrintLine("DebugConsoleClient.Connect() error, hostname is invalid.");
                 return;
@@ -69,14 +75,16 @@ namespace ATC.Framework.Debugging
                 return;
             }
 
+            Tracer.PrintLine($"DebugConsoleClient.Connect() connecting to: {Hostname} on port: {Port}");
+
             if (transport == null)
             {
                 transport = new UdpClientTransport(Hostname, Port);
+                transport.Connect();
 
                 // add event callback handlers
                 transport.ConnectionStateCallback += new EventHandler<ConnectionStateEventArgs>(TransportConnectionStateCallback);
                 transport.ResponseReceivedCallback += new EventHandler<ResponseReceivedEventArgs>(TransportResponseReceivedCallback);
-
             }
             else
             {
@@ -121,16 +129,20 @@ namespace ATC.Framework.Debugging
             transport.Send(jsonString);
         }
 
+        #endregion
+
         #region Transport event handlers
-        static void TransportConnectionStateCallback(object sender, ConnectionStateEventArgs e)
+
+        private static void TransportConnectionStateCallback(object sender, ConnectionStateEventArgs e)
         {
             Tracer.PrintLine("DebugConsoleClient connection state: " + e.State);
         }
 
-        static void TransportResponseReceivedCallback(object sender, ResponseReceivedEventArgs e)
+        private static void TransportResponseReceivedCallback(object sender, ResponseReceivedEventArgs e)
         {
             Tracer.PrintLine("DebugConsoleClient received response: " + e.Response);
         }
+
         #endregion
     }
 }

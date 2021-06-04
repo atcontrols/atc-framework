@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ATC.Framework.Communications
 {
@@ -35,6 +36,11 @@ namespace ATC.Framework.Communications
         }
 
         /// <summary>
+        /// If set, the transport will automatically try and connect on sending.
+        /// </summary>
+        public bool AutoConnect { get; set; }
+
+        /// <summary>
         /// If this is not an empty string, then ReceiveDataCallback will only be invoked when the specified delimeter is detected.
         /// The delimeter is usually used to mark the end of a line of text.
         /// </summary>
@@ -60,20 +66,24 @@ namespace ATC.Framework.Communications
         /// Instruct the transport to connect.
         /// </summary>
         /// <returns>True on success, false on fail.</returns>
-        public abstract void Connect();
+        public abstract bool Connect();
+
+        public abstract Task<bool> ConnectAsync();
 
         /// <summary>
         /// Instruct the transport to disconnect.
         /// </summary>
         /// <returns>True on success, false on fail.</returns>
-        public abstract void Disconnect();
+        public abstract bool Disconnect();
 
         /// <summary>
         /// Send the specified string via the transport.
         /// </summary>
         /// <param name="s">The string to send.</param>
         /// <returns>True on success, false on fail.</returns>
-        public abstract void Send(string s);
+        public abstract bool Send(string s);
+
+        public abstract Task<bool> SendAsync(string s);
 
         #endregion
 

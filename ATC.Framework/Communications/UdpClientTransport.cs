@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace ATC.Framework.Communications
 {
     public class UdpClientTransport : Transport
     {
-        private readonly UdpClient client = new UdpClient();
+        private UdpClient client;
 
         public string Hostname { get; private set; }
         public int Port { get; private set; }
@@ -16,41 +17,79 @@ namespace ATC.Framework.Communications
             Port = port;
         }
 
-        public override void Connect()
+        public override bool Connect()
         {
             try
             {
+                Trace($"Connect() attempting connection to: {Hostname} on port: {Port}");
+                ConnectionState = ConnectionState.Connecting;
+
+                client = new UdpClient();
                 client.Connect(Hostname, Port);
+                ConnectionState = ConnectionState.Connected;
+
+                return true;
             }
             catch (Exception ex)
             {
                 TraceException("Connect() exception caught.", ex);
+                return false;
             }
         }
 
-        public override void Disconnect()
+        public override Task<bool> ConnectAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool Disconnect()
         {
             try
             {
+                if (client == null)
+                {
+                    TraceError("Disconnect() client has not been initialized.");
+                    return false;
+                }
+
                 client.Close();
+                client = null;
+                ConnectionState = ConnectionState.NotConnected;
+
+                return true;
             }
             catch (Exception ex)
             {
                 TraceException("Disconnect() exception caught.", ex);
+                return false;
             }
         }
 
-        public override void Send(string s)
+        public override bool Send(string s)
         {
+            if (client == null)
+            {
+                TraceError("Send() UDP client has not been initialized.");
+                return false;
+            }
+
             try
             {
                 byte[] bytes = Encoding.GetBytes(s);
-                client.SendAsync(bytes, bytes.Length);
+                int bytesSent = client.Send(bytes, bytes.Length);
+                Trace($"Send() sent {bytesSent} bytes.");
+                return true;
             }
             catch (Exception ex)
             {
                 TraceException("Send() exception caught.", ex);
+                return false;
             }
+        }
+
+        public override Task<bool> SendAsync(string s)
+        {
+            throw new NotImplementedException();
         }
 
         protected override void Dispose(bool disposing)
