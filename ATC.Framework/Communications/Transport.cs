@@ -4,6 +4,21 @@ using System.Threading.Tasks;
 
 namespace ATC.Framework.Communications
 {
+    public interface ITransport : IConnectable
+    {
+        // properties
+        bool AutoConnect { get; set; }
+        string Delimeter { get; set; }
+        Encoding Encoding { get; set; }
+
+        // methods        
+        void Send(string s);
+
+        // events
+        event EventHandler<ConnectionStateEventArgs> ConnectionStateCallback;
+        event EventHandler<ResponseReceivedEventArgs> ResponseReceivedCallback;
+    }
+
     public abstract class Transport : SystemComponent, ITransport, IDisposable
     {
         #region Fields
@@ -66,24 +81,18 @@ namespace ATC.Framework.Communications
         /// Instruct the transport to connect.
         /// </summary>
         /// <returns>True on success, false on fail.</returns>
-        public abstract bool Connect();
-
-        public abstract Task<bool> ConnectAsync();
+        public abstract void Connect();
 
         /// <summary>
         /// Instruct the transport to disconnect.
         /// </summary>
-        /// <returns>True on success, false on fail.</returns>
-        public abstract bool Disconnect();
+        public abstract void Disconnect();
 
         /// <summary>
         /// Send the specified string via the transport.
         /// </summary>
         /// <param name="s">The string to send.</param>
-        /// <returns>True on success, false on fail.</returns>
-        public abstract bool Send(string s);
-
-        public abstract Task<bool> SendAsync(string s);
+        public abstract void Send(string s);
 
         #endregion
 

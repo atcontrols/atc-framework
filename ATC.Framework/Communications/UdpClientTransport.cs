@@ -17,7 +17,7 @@ namespace ATC.Framework.Communications
             Port = port;
         }
 
-        public override bool Connect()
+        public override void Connect()
         {
             try
             {
@@ -27,50 +27,24 @@ namespace ATC.Framework.Communications
                 client = new UdpClient();
                 client.Connect(Hostname, Port);
                 ConnectionState = ConnectionState.Connected;
-
-                return true;
             }
             catch (Exception ex)
             {
                 TraceException("Connect() exception caught.", ex);
-                return false;
             }
-        }
+        }       
 
-        public override Task<bool> ConnectAsync()
+        public override void Disconnect()
         {
-            throw new NotImplementedException();
+            Dispose();
         }
 
-        public override bool Disconnect()
-        {
-            try
-            {
-                if (client == null)
-                {
-                    TraceError("Disconnect() client has not been initialized.");
-                    return false;
-                }
-
-                client.Close();
-                client = null;
-                ConnectionState = ConnectionState.NotConnected;
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                TraceException("Disconnect() exception caught.", ex);
-                return false;
-            }
-        }
-
-        public override bool Send(string s)
+        public override void Send(string s)
         {
             if (client == null)
             {
                 TraceError("Send() UDP client has not been initialized.");
-                return false;
+                return;
             }
 
             try
@@ -78,25 +52,26 @@ namespace ATC.Framework.Communications
                 byte[] bytes = Encoding.GetBytes(s);
                 int bytesSent = client.Send(bytes, bytes.Length);
                 Trace($"Send() sent {bytesSent} bytes.");
-                return true;
             }
             catch (Exception ex)
             {
                 TraceException("Send() exception caught.", ex);
-                return false;
             }
-        }
-
-        public override Task<bool> SendAsync(string s)
-        {
-            throw new NotImplementedException();
-        }
+        }       
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                Disconnect();
+                if (client != null)
+                {
+                    Trace($"Dispose() cleaning up resources.");
+                    client.Close();
+                    client.Dispose();
+                    client = null;
+                }
+
+                ConnectionState = ConnectionState.NotConnected;
             }
         }
     }
