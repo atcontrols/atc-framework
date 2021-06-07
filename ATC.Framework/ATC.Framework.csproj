@@ -50,8 +50,8 @@
   <ItemGroup>
     <Compile Include="AnalogJoin.cs" />
     <Compile Include="Communications\ConnectionState.cs" />
+    <Compile Include="Communications\ConnectionWatchdog.cs" />
     <Compile Include="Communications\EventArgs.cs" />
-    <Compile Include="Communications\ITransport.cs" />
     <Compile Include="Communications\TcpClientTransport.cs" />
     <Compile Include="Communications\Transport.cs" />
     <Compile Include="Communications\UdpClientTransport.cs" />
@@ -68,7 +68,7 @@
     <Compile Include="Devices\DeviceDetails.cs" />
     <Compile Include="Devices\DeviceSerializer.cs" />
     <Compile Include="Devices\DisplayDevice.cs" />
-    <Compile Include="Devices\IConnectable.cs" />
+    <Compile Include="Communications\IConnectable.cs" />
     <Compile Include="Devices\IVolumeControl.cs" />
     <Compile Include="Devices\PowerDevice.cs" />
     <Compile Include="Devices\ProjectorDevice.cs" />

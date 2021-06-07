@@ -1,8 +1,6 @@
-﻿using ATC.Framework.Communications;
-
-namespace ATC.Framework.Devices
+﻿namespace ATC.Framework.Communications
 {
-    public interface IConnectable
+    public interface IConnectable : ISystemComponent
     {
         ConnectionState ConnectionState { get; }
 
