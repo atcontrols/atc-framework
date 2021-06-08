@@ -30,7 +30,7 @@ namespace ATC.Framework.Communications
         /// Number of components being monitored by this watchdog.
         /// </summary>
         public int DeviceCount => components.Count;
-        
+
         /// <summary>
         /// Returns true if the watchdog is currently active.
         /// </summary>

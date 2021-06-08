@@ -4,7 +4,7 @@
     {
         ConnectionState ConnectionState { get; }
 
-        void Connect();
-        void Disconnect();
+        bool Connect();
+        bool Disconnect();
     }
 }

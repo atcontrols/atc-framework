@@ -37,14 +37,14 @@ namespace ATC.Framework.Communications
 
         #region Public methods
 
-        public override void Connect()
+        public override bool Connect()
         {
             // validate properties
             var (isValid, message) = ValidateProperties();
             if (!isValid)
             {
                 TraceError($"Connect() {message}");
-                return;
+                return false;
             }
 
             try
@@ -52,32 +52,48 @@ namespace ATC.Framework.Communications
                 Trace($"Connect() attempting connection to: {Hostname} on port: {Port}, timeout is: {Timeout}ms");
                 ConnectionState = ConnectionState.Connecting;
                 client = new TcpClient();
-                bool success = client.ConnectAsync(Hostname, Port).Wait(Timeout);
+                bool success = client.ConnectAsync(Hostname, Port)
+                    .Wait(Timeout);
+
                 if (success)
                 {
                     Trace("Connect() connection was successful.");
                     ConnectionState = ConnectionState.Connected;
-                    _ = ReadStreamAsync(client.GetStream());
+
+                    // start background task
+                    Task.Run(() =>
+                    {
+                        ReadStream(client.GetStream());
+                    });
                 }
                 else
                 {
                     TraceError($"Connect() could not complete connection within timeout period.");
                     Dispose();
                 }
+
+                return success;
             }
             catch (Exception ex)
             {
                 TraceException("Connect() exception caught.", ex);
                 Dispose();
+                return false;
             }
         }
 
-        public override void Disconnect()
+        public override bool Disconnect()
         {
-            Dispose();
+            if (client == null)
+                return false;
+            else
+            {
+                Dispose();
+                return true;
+            }
         }
 
-        public override void Send(string s)
+        public override bool Send(string s)
         {
             // perform autoconnection logic
             if (AutoConnect && ConnectionState == ConnectionState.NotConnected)
@@ -85,14 +101,19 @@ namespace ATC.Framework.Communications
             else if (client == null)
             {
                 TraceError("Send() TCP client has not been initialized.");
-                return;
+                return false;
+            }
+            else if (!client.Connected && ConnectionState == ConnectionState.Connecting)
+            {
+                TraceError("Send() TCP client is currently attempting connection.");
+                return false;
             }
 
             var stream = client.GetStream();
             if (!stream.CanWrite)
             {
                 TraceError($"Send() network stream is not ready or not writable.");
-                return;
+                return false;
             }
 
             try
@@ -107,11 +128,14 @@ namespace ATC.Framework.Communications
                         else
                             Trace($"Send() completed write of {bytes.Length} bytes.");
                     });
+
+                return true;
             }
             catch (Exception ex)
             {
                 TraceException("Send() exception caught.", ex);
                 Dispose();
+                return false;
             }
         }
 
@@ -129,31 +153,37 @@ namespace ATC.Framework.Communications
             return (true, string.Empty);
         }
 
-        private async Task ReadStreamAsync(NetworkStream stream)
+        private void ReadStream(NetworkStream stream)
         {
             byte[] buffer = new byte[4096];
 
             try
             {
-                while (stream.CanRead)
+                int bytesRead;
+                while (stream.CanRead && (bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
                 {
                     // read string response from stream
-                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                     string response = Encoding.GetString(buffer, 0, bytesRead);
-                    Trace($"ReadStream() received {bytesRead} bytes, content: \"{response.ToControlCodeString()}\"");
-
-                    // raise event
-                    RaiseResponseReceivedEvent(response);
+                    Trace($"ReadStream() received {bytesRead} bytes.");
+                    ParseResponse(response);
                 }
 
-                TraceError("ReadStreamAsync() unable to read from stream.");
+                TraceError("ReadStream() unable to read from stream.");
                 Dispose();
             }
             catch (Exception ex)
             {
-                TraceException("ReadStreamAsync() exception caught.", ex);
+                TraceException("ReadStream() exception caught.", ex);
                 Dispose();
             }
+        }
+
+        protected virtual void ParseResponse(string response)
+        {
+            Trace($"ParseResponse() received string: \"{response.ToControlCodeString()}\"");
+
+            // raise event
+            RaiseResponseReceivedEvent(response);
         }
 
         #endregion

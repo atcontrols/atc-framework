@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 
 namespace ATC.Framework.Communications
 {
@@ -17,7 +16,7 @@ namespace ATC.Framework.Communications
             Port = port;
         }
 
-        public override void Connect()
+        public override bool Connect()
         {
             try
             {
@@ -27,24 +26,32 @@ namespace ATC.Framework.Communications
                 client = new UdpClient();
                 client.Connect(Hostname, Port);
                 ConnectionState = ConnectionState.Connected;
+                return true;
             }
             catch (Exception ex)
             {
                 TraceException("Connect() exception caught.", ex);
+                return false;
             }
-        }       
-
-        public override void Disconnect()
-        {
-            Dispose();
         }
 
-        public override void Send(string s)
+        public override bool Disconnect()
+        {
+            if (client == null)
+                return false;
+            else
+            {
+                Dispose();
+                return true;
+            }
+        }
+
+        public override bool Send(string s)
         {
             if (client == null)
             {
                 TraceError("Send() UDP client has not been initialized.");
-                return;
+                return false;
             }
 
             try
@@ -52,12 +59,14 @@ namespace ATC.Framework.Communications
                 byte[] bytes = Encoding.GetBytes(s);
                 int bytesSent = client.Send(bytes, bytes.Length);
                 Trace($"Send() sent {bytesSent} bytes.");
+                return true;
             }
             catch (Exception ex)
             {
                 TraceException("Send() exception caught.", ex);
+                return false;
             }
-        }       
+        }
 
         protected override void Dispose(bool disposing)
         {

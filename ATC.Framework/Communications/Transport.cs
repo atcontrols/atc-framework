@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ATC.Framework.Communications
 {
@@ -12,7 +11,7 @@ namespace ATC.Framework.Communications
         Encoding Encoding { get; set; }
 
         // methods        
-        void Send(string s);
+        bool Send(string s);
 
         // events
         event EventHandler<ConnectionStateEventArgs> ConnectionStateCallback;
@@ -77,22 +76,23 @@ namespace ATC.Framework.Communications
         #endregion
 
         #region Public methods
+
         /// <summary>
         /// Instruct the transport to connect.
         /// </summary>
         /// <returns>True on success, false on fail.</returns>
-        public abstract void Connect();
+        public abstract bool Connect();
 
         /// <summary>
         /// Instruct the transport to disconnect.
         /// </summary>
-        public abstract void Disconnect();
+        public abstract bool Disconnect();
 
         /// <summary>
         /// Send the specified string via the transport.
         /// </summary>
         /// <param name="s">The string to send.</param>
-        public abstract void Send(string s);
+        public abstract bool Send(string s);
 
         #endregion
 

@@ -53,6 +53,7 @@
     <Compile Include="Communications\ConnectionWatchdog.cs" />
     <Compile Include="Communications\EventArgs.cs" />
     <Compile Include="Communications\TcpClientTransport.cs" />
+    <Compile Include="Communications\TelnetTransport.cs" />
     <Compile Include="Communications\Transport.cs" />
     <Compile Include="Communications\UdpClientTransport.cs" />
     <Compile Include="ConfigManager.cs" />
