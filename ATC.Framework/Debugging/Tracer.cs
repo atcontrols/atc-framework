@@ -18,6 +18,7 @@ namespace ATC.Framework.Debugging
         void TraceWarning(string message);
         void TraceError(string message);
         void TraceException(string message, Exception ex);
+        void TraceException(Exception ex, string methodName, string message = null);
     }
 
     public class Tracer : ITracer
@@ -144,6 +145,35 @@ namespace ATC.Framework.Debugging
         public void TraceException(string message, Exception ex)
         {
             string outputMessage = string.Format("{0}\r\nException message: \"{1}\"", message, ex.Message);
+            if (ex.InnerException != null)
+                outputMessage += string.Format("\r\nInner exception message: \"{0}\"", ex.InnerException.Message);
+
+            // exceptions are always outputted
+            OutputMessage(Name, outputMessage, Category.Exception);
+
+            if (OutputStackTrace)
+            {
+                PrintLine("Stack trace below:\r\n" + ex.StackTrace);
+                if (ex.InnerException != null && !string.IsNullOrEmpty(ex.InnerException.StackTrace))
+                    PrintLine("Inner exception stack trace below:\r\n" + ex.StackTrace);
+            }
+
+            if (OutputErrorLog)
+                ErrorLog.Exception(message, ex);
+        }
+
+        public void TraceException(Exception ex, string methodName, string message = null)
+        {
+            string outputMessage = $"{methodName}() Type: {ex.GetType().Name}";
+
+            // append message parameter
+            if (!string.IsNullOrEmpty(message))
+                outputMessage += $", Message: \"{message}\"";
+
+            // append exception message
+            outputMessage += $"\r\nException message: \"{ex.Message}\"";
+
+            // append inner exception message (if it exists)
             if (ex.InnerException != null)
                 outputMessage += string.Format("\r\nInner exception message: \"{0}\"", ex.InnerException.Message);
 

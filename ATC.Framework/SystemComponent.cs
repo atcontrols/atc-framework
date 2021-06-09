@@ -161,6 +161,11 @@ namespace ATC.Framework
             tracer.TraceException(message, ex);
         }
 
+        protected void TraceException(Exception ex, string methodName, string message = null)
+        {
+            tracer.TraceException(ex, methodName, message);
+        }
+
         #endregion
 
         #region Class static methods
