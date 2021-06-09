@@ -33,6 +33,7 @@ namespace ATC.Framework.Communications
             Hostname = hostname;
             Port = port;
         }
+
         #endregion
 
         #region Public methods
