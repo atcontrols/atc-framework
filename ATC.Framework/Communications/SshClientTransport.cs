@@ -83,7 +83,7 @@ namespace ATC.Framework.Communications
                 PasswordAuthenticationMethod passwordAuth = new PasswordAuthenticationMethod(Username, Password);
                 ConnectionInfo connectionInfo = new ConnectionInfo(Hostname, Port, Username, passwordAuth)
                 {
-                    Timeout = new TimeSpan(hours: 0, minutes: 0, seconds: Timeout / 1000)
+                    Timeout = TimeSpan.FromSeconds(Timeout)
                 };
                 client = new SshClient(connectionInfo);
 
