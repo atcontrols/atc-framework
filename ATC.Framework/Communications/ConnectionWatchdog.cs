@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace ATC.Framework.Communications
 {
@@ -10,7 +11,6 @@ namespace ATC.Framework.Communications
 
         private readonly List<IConnectable> components = new List<IConnectable>();
         private Timer timer;
-        private int index;
 
         #endregion
 
@@ -46,7 +46,6 @@ namespace ATC.Framework.Communications
         {
             Trace($"AddDevice() adding {component.ComponentName} to list of components.");
             components.Add(component);
-            index = 0;
         }
 
         /// <summary>
@@ -92,17 +91,25 @@ namespace ATC.Framework.Communications
 
         private void TimerCallback(object o)
         {
-            IConnectable component = components[index++];
-
-            if (component.ConnectionState == ConnectionState.NotConnected)
+            foreach (var component in components)
             {
-                Trace($"TimerCallback() instructing {component.ComponentName} to connect.");
-                component.Connect();
+                if (component.ConnectionState == ConnectionState.NotConnected)
+                {
+                    Trace($"TimerCallback() instructing {component.ComponentName} to connect.");
+                    Task.Run(() =>
+                    {
+                        try
+                        {
+                            bool result = component.Connect();
+                            Trace($"TimerCallback() connection successful: {result}");
+                        }
+                        catch (Exception ex)
+                        {
+                            TraceException(ex, nameof(TimerCallback), $"Error occurred while trying to connect");
+                        }
+                    });
+                };
             }
-
-            // reset index
-            if (index >= DeviceCount)
-                index = 0;
         }
     }
 }
