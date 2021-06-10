@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace ATC.Framework.Communications
 {
@@ -17,14 +17,9 @@ namespace ATC.Framework.Communications
         #region Properties
 
         /// <summary>
-        /// How long to wait (in milliseconds) after Start is called to start checking devices.
-        /// </summary>
-        public int StartDelay { get; set; } = 500;
-
-        /// <summary>
         /// How long to wait between checks.
         /// </summary>
-        public int Interval { get; set; } = 1000;
+        public double Interval { get; set; } = 10000;
 
         /// <summary>
         /// Number of components being monitored by this watchdog.
@@ -66,7 +61,9 @@ namespace ATC.Framework.Communications
             if (DeviceCount > 0)
             {
                 Trace($"Start() starting monitoring of {DeviceCount} devices.");
-                timer = new Timer(TimerCallback, null, StartDelay, Interval);
+                timer = new Timer(Interval);
+                timer.Elapsed += TimerCallback;
+                timer.Start();
             }
             else
                 TraceError("Start() there are no devices to monitor.");
@@ -89,27 +86,36 @@ namespace ATC.Framework.Communications
             }
         }
 
-        private void TimerCallback(object o)
+        private async void TimerCallback(object sender, ElapsedEventArgs e)
         {
+            Trace($"TimerCallback() checking {components.Count} devices connection state.");
+            List<Task> tasks = new List<Task>();
+
             foreach (var component in components)
             {
                 if (component.ConnectionState == ConnectionState.NotConnected)
                 {
-                    Trace($"TimerCallback() instructing {component.ComponentName} to connect.");
-                    Task.Run(() =>
+                    tasks.Add(Task.Run(() =>
                     {
                         try
                         {
-                            bool result = component.Connect();
-                            Trace($"TimerCallback() connection successful: {result}");
+                            Trace($"TimerCallback() instructing {component.ComponentName} to connect.");
+                            bool success = component.Connect();
+
+                            if (success)
+                                TraceInfo($"TimerCallback() successfully connected to: {component.ComponentName}");
+                            else
+                                TraceWarning($"TimerCallback() could not complete connection to: {component.ComponentName}");
                         }
                         catch (Exception ex)
                         {
                             TraceException(ex, nameof(TimerCallback), $"Error occurred while trying to connect");
                         }
-                    });
+                    }));
                 };
             }
+
+            await Task.WhenAll(tasks);
         }
     }
 }
