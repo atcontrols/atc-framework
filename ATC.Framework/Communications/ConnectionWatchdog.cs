@@ -70,10 +70,28 @@ namespace ATC.Framework.Communications
         }
 
         /// <summary>
-        /// Stop monitoring of added devices.
+        /// Stop monitoring of added devices. This will also disconnect any connected devices.
         /// </summary>
         public void Stop()
         {
+            // stop timer
+            if (timer != null)
+            {
+                timer.Stop();
+                timer.Elapsed -= TimerCallback;
+            }
+                
+            // disconnect any connected components
+            Trace("Stop() disconnecting any connected components.");
+            foreach (var component in components)
+            {
+                if (component.ConnectionState == ConnectionState.Connected)
+                {
+                    Trace($"Stop() instructing {component.ComponentName} to disconnect.");
+                    component.Disconnect();
+                }
+            }
+
             Dispose();
         }
 
