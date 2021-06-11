@@ -2,22 +2,12 @@
 
 namespace ATC.Framework.Devices
 {
-    public interface IDisplayDevice : IPowerDevice
-    {
-        /// <summary>
-        /// The current input this display device is on.
-        /// </summary>
-        string Input { get; }
-
-        string[] GetInputs();
-        void SetInput(string input);
-
-        event EventHandler<InputEventArgs> InputEventHandler;
-    }
+    public interface IDisplayDevice : IPowerDevice, IInputDevice, IVolumeDevice { }
 
     public abstract class DisplayDevice : PowerDevice, IDisplayDevice
     {
         private string _input;
+        private int _volume;
 
         /// <summary>
         /// The currently active input for this display.
@@ -45,14 +35,40 @@ namespace ATC.Framework.Devices
             }
         }
 
+        /// <summary>
+        /// The current volume level for this display.
+        /// </summary>
+        public int Volume
+        {
+            get { return _volume; }
+            protected set
+            {
+                if (_volume != value)
+                {
+                    _volume = value;
+                    Trace("Volume set to: " + value);
+
+                    // raise event
+                    VolumeEventHandler?.Invoke(this, new VolumeEventArgs() { Value = value });
+                }
+            }
+        }
+
         public abstract string[] GetInputs();
-        public abstract void SetInput(string input);
+        public abstract void SetInput(string value);
+        public abstract void SetVolume(int value);
 
         public event EventHandler<InputEventArgs> InputEventHandler;
+        public event EventHandler<VolumeEventArgs> VolumeEventHandler;
     }
 
     public class InputEventArgs : EventArgs
     {
         public string Value { get; set; }
+    }
+
+    public class VolumeEventArgs : EventArgs
+    {
+        public int Value { get; set; }
     }
 }

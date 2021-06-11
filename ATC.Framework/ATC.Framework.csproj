@@ -71,7 +71,8 @@
     <Compile Include="Devices\DeviceSerializer.cs" />
     <Compile Include="Devices\DisplayDevice.cs" />
     <Compile Include="Communications\IConnectable.cs" />
-    <Compile Include="Devices\IVolumeControl.cs" />
+    <Compile Include="Devices\IInputDevice.cs" />
+    <Compile Include="Devices\IVolumeDevice.cs" />
     <Compile Include="Devices\PowerDevice.cs" />
     <Compile Include="Devices\ProjectorDevice.cs" />
     <Compile Include="Devices\ScreenDevice.cs" />
