@@ -60,12 +60,12 @@ namespace ATC.Framework
             catch (FileNotFoundException)
             {
                 Tracer.PrintLine("ConfigManager.Load() file not found.");
-                return null;
+                return default;
             }
             catch (Exception ex)
             {
                 Tracer.PrintLine("ConfigManager.Load() exception caught: ", ex);
-                return null;
+                return default;
             }
         }
 
@@ -97,7 +97,7 @@ namespace ATC.Framework
                 string filePath = GetFilePath(directory, filename);
                 Tracer.PrintLine("ConfigManager.Write() attempting to write to file: " + filePath);
 
-                string json = JsonConvert.SerializeObject(obj);
+                string json = JsonConvert.SerializeObject(obj, Formatting.Indented);
 
                 using (FileStream stream = File.Create(filePath))
                 {
