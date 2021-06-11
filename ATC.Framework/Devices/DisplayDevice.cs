@@ -8,6 +8,7 @@ namespace ATC.Framework.Devices
     {
         private string _input;
         private int _volume;
+        private bool _mute;
 
         /// <summary>
         /// The currently active input for this display.
@@ -54,12 +55,30 @@ namespace ATC.Framework.Devices
             }
         }
 
+        public bool Mute
+        {
+            get => _mute;
+            protected set
+            {
+                if (_mute != value)
+                {
+                    _mute = value;
+                    Trace("Mute set to: " + value);
+
+                    // raise event
+                    MuteEventHandler?.Invoke(this, new MuteEventArgs() { Value = value });
+                }
+            }
+        }
+
         public abstract string[] GetInputs();
         public abstract void SetInput(string value);
         public abstract void SetVolume(int value);
+        public abstract void SetMute(bool value);
 
         public event EventHandler<InputEventArgs> InputEventHandler;
         public event EventHandler<VolumeEventArgs> VolumeEventHandler;
+        public event EventHandler<MuteEventArgs> MuteEventHandler;
     }
 
     public class InputEventArgs : EventArgs
@@ -70,5 +89,10 @@ namespace ATC.Framework.Devices
     public class VolumeEventArgs : EventArgs
     {
         public int Value { get; set; }
+    }
+
+    public class MuteEventArgs : EventArgs
+    {
+        public bool Value { get; set; }
     }
 }
