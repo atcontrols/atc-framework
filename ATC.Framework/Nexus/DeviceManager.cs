@@ -84,38 +84,32 @@ namespace ATC.Framework.Nexus
         {
             device.OnlineEventHandler += new EventHandler<OnlineEventArgs>(DeviceOnlineEventHandler);
 
-            if (device is IPowerDevice)
+            if (device is IPowerDevice powerDevice)
             {
-                IPowerDevice powerDevice = (IPowerDevice)device;
                 powerDevice.PowerEventHandler += new EventHandler<PowerEventArgs>(DevicePowerEventHandler);
             }
 
-            if (device is IDisplayDevice)
+            if (device is IDisplayDevice displayDevice)
             {
-                IDisplayDevice displayDevice = (IDisplayDevice)device;
                 displayDevice.InputEventHandler += new EventHandler<InputEventArgs>(DeviceInputEventHandler);
             }
 
-            if (device is IProjectorDevice)
+            if (device is IProjectorDevice projectorDevice)
             {
-                IProjectorDevice projectorDevice = (IProjectorDevice)device;
                 projectorDevice.LampHoursEventHandler += new EventHandler<LampHoursEventArgs>(DeviceLampHoursEventHandler);
             }
 
-            if (device is IScreenDevice)
+            if (device is IScreenDevice screenDevice)
             {
-                IScreenDevice screenDevice = (IScreenDevice)device;
                 screenDevice.ScreenPositionHandler += new EventHandler<ScreenPositionEventArgs>(DeviceScreenPositionHandler);
             }
 
-            if (device is ISwitcherDevice)
+            if (device is ISwitcherDevice switcherDevice)
             {
-                ISwitcherDevice switcherDevice = (ISwitcherDevice)device;
             }
 
-            if (device is IConferenceCodecDevice)
+            if (device is IConferenceCodecDevice conferenceCodecDevice)
             {
-                IConferenceCodecDevice conferenceCodecDevice = (IConferenceCodecDevice)device;
                 conferenceCodecDevice.MicMuteEventHandler += new EventHandler<MicMuteEventArgs>(DeviceEventHandler);
                 conferenceCodecDevice.CameraMuteEventHandler += new EventHandler<CameraMuteEventArgs>(DeviceEventHandler);
                 conferenceCodecDevice.CallActiveEventHandler += new EventHandler<CallActiveEventArgs>(DeviceEventHandler);
@@ -172,9 +166,8 @@ namespace ATC.Framework.Nexus
 
         private void DeviceEventHandler(object sender, EventArgs e)
         {
-            if (sender is IDevice)
+            if (sender is IDevice device)
             {
-                IDevice device = (IDevice)sender;
                 SetUpdatedDevice(device);
             }
             else
