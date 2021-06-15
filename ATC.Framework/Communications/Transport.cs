@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Text;
 
 namespace ATC.Framework.Communications
@@ -67,14 +68,6 @@ namespace ATC.Framework.Communications
 
         #endregion
 
-        #region Constructor
-
-        public Transport()
-        {
-            Delimeter = String.Empty;
-        }
-        #endregion
-
         #region Public methods
 
         /// <summary>
@@ -96,6 +89,110 @@ namespace ATC.Framework.Communications
 
         #endregion
 
+        /// <summary>
+        /// Attempt to read from the specified stream continuously.
+        /// </summary>
+        /// <param name="stream"></param>
+        protected void ReadStream(Stream stream)
+        {
+            byte[] buffer = new byte[4096];
+
+            try
+            {
+                int bytesRead;
+                while (stream.CanRead && (bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    // read stream into buffer
+                    Trace($"ReadStream() received {bytesRead} bytes.");
+
+                    // decode byte array
+                    string response = Encoding.GetString(buffer, 0, bytesRead);
+                    ParseResponse(response);
+                }
+
+                TraceWarning("ReadStream() stream is not readable or 0 bytes read.");
+                Dispose();
+            }
+            catch (Exception ex)
+            {
+                TraceException("ReadStream() exception caught.", ex);
+                Dispose();
+            }
+        }
+
+        protected void ReadBuffer(byte[] buffer, int bufferLength)
+        {
+            try
+            {
+                Trace($"ReadBuffer() attempting to decode {bufferLength} bytes.");
+
+                // decode byte array
+                string response = Encoding.GetString(buffer, 0, bufferLength);
+                ParseResponse(response);
+            }
+            catch (Exception ex)
+            {
+                TraceException("ReadBuffer() exception caught.", ex);
+                Dispose();
+            }
+        }
+
+        protected virtual void ParseResponse(string response)
+        {
+            if (string.IsNullOrEmpty(Delimeter)) // no delimeter present
+            {
+                // invoke response callback
+                RaiseResponseReceivedEvent(response);
+            }
+            else // look for delimeter
+            {
+                try
+                {
+                    // add to buffer
+                    if (responseBuffer == null)
+                        responseBuffer = new StringBuilder(response) { Capacity = ResponseBufferCapacity };
+                    else
+                        responseBuffer.Append(response); // add incoming string to buffer
+
+                    Trace($"RaiseResponseReceivedEvent() looking for delimeter in: \"{responseBuffer.ToString().ToControlCodeString()}\"");
+
+                    // process buffer while looking for the delimeter
+                    var index = responseBuffer.ToString().IndexOf(Delimeter);
+                    var count = 0;
+                    while (index != -1)
+                    {
+                        count++;
+
+                        var length = index + Delimeter.Length;
+                        Trace(string.Format("RaiseResponseReceivedEvent() delimeter found at index: {0}, length: {1}, count: {2}", index, length, count));
+
+                        // remove chunk from buffer
+                        string chunk = responseBuffer.ToString().Substring(0, length);
+                        responseBuffer.Remove(0, length);
+                        Trace($"RaiseResponseReceivedEvent() extracted chunk: \"{chunk.ToControlCodeString()}\", length: {chunk.Length}, buffer size: {responseBuffer.Length}");
+
+                        // invoke response callback
+                        RaiseResponseReceivedEvent(chunk);
+
+                        // get next index
+                        index = responseBuffer.ToString().IndexOf(Delimeter);
+                    }
+
+                    // report status
+                    string message = count == 0 ?
+                        $"delimeter not found in buffer at this stage" :
+                        $"finished processing {count} chunks";
+
+                    Trace($"ProcessBytes() {message}. Buffer size: {responseBuffer.Length}");
+                }
+                catch (Exception ex)
+                {
+                    TraceException(ex, nameof(ParseResponse), "Error occurred while parsing response.");
+                    responseBuffer = null;
+                }
+            }
+        }
+
         #region Events
 
         /// <summary>
@@ -103,7 +200,7 @@ namespace ATC.Framework.Communications
         /// </summary>
         public event EventHandler<ConnectionStateEventArgs> ConnectionStateCallback;
 
-        protected void RaiseConnectionStateEvent(ConnectionState state)
+        private void RaiseConnectionStateEvent(ConnectionState state)
         {
             if (ConnectionStateCallback != null)
                 ConnectionStateCallback(this, new ConnectionStateEventArgs() { State = state });
@@ -120,64 +217,14 @@ namespace ATC.Framework.Communications
         /// Process the received response looking for any delimeter and invokes the callback method.
         /// </summary>
         /// <param name="args"></param>
-        protected void RaiseResponseReceivedEvent(string response)
+        private void RaiseResponseReceivedEvent(string response)
         {
             try
             {
-                // skip over empty replies
-                if (string.IsNullOrEmpty(response))
-                    return;
-
-                if (string.IsNullOrEmpty(Delimeter)) // no delimeter present
-                {
-                    var args = new ResponseReceivedEventArgs() { Response = response };
-                    // invoke response callback
-                    if (ResponseReceivedCallback != null)
-                        ResponseReceivedCallback(this, args);
-                    else
-                        TraceError("RaiseResponseReceivedEvent() ResponseReceivedCallback is null.");
-                }
-                else // look for delimeter
-                {
-                    Trace($"RaiseResponseReceivedEvent() looking for delimeter in: \"{Utilities.ControlCodeString(responseBuffer.ToString())}\"");
-
-                    // add to buffer
-                    if (responseBuffer == null)
-                        responseBuffer = new StringBuilder(response) { Capacity = ResponseBufferCapacity };
-                    else
-                        responseBuffer.Append(response); // add incoming string to buffer
-
-                    // process buffer while looking for the delimeter
-                    var index = responseBuffer.ToString().IndexOf(Delimeter);
-                    var count = 0;
-                    while (index != -1)
-                    {
-                        count++;
-
-                        var length = index + Delimeter.Length;
-                        Trace(string.Format("RaiseResponseReceivedEvent() delimeter found at index: {0}, length: {1}, count: {2}", index, length, count));
-
-                        // remove chunk from buffer
-                        var chunk = responseBuffer.ToString().Substring(0, length);
-                        responseBuffer.Remove(0, length);
-                        Trace(string.Format("RaiseResponseReceivedEvent() extracted chunk: \"{0}\", length: {1}, buffer size: {2}", Utilities.ControlCodeString(chunk), chunk.Length, responseBuffer.Length));
-
-                        // invoke response callback
-                        if (ResponseReceivedCallback != null)
-                            ResponseReceivedCallback(this, new ResponseReceivedEventArgs() { Response = chunk });
-                        else
-                            TraceError("RaiseResponseReceivedEvent() ResponseReceivedCallback is null.");
-
-                        // get next index
-                        index = responseBuffer.ToString().IndexOf(Delimeter);
-                    }
-
-                    // report status
-                    if (count == 0)
-                        Trace("RaiseResponseReceivedEvent() delimeter not found in buffer at this stage. Buffer size: " + responseBuffer.Length);
-                    else
-                        Trace(string.Format("RaiseResponseReceivedEvent() finished processing {0} chunks. Buffer size: {1}", count, responseBuffer.Length));
-                }
+                if (ResponseReceivedCallback != null)
+                    ResponseReceivedCallback(this, new ResponseReceivedEventArgs() { Response = response });
+                else
+                    TraceError("RaiseResponseReceivedEvent() ResponseReceivedCallback is null.");
             }
             catch (Exception ex)
             {

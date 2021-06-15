@@ -2,6 +2,7 @@
 using Renci.SshNet.Common;
 using System;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ATC.Framework.Communications
 {
@@ -10,6 +11,7 @@ namespace ATC.Framework.Communications
         #region Fields
 
         private SshClient client;
+        private ShellStream stream;
 
         #endregion
 
@@ -79,9 +81,20 @@ namespace ATC.Framework.Communications
 
             try
             {
-                // create new client using password authentication
+                // set authentication methods
                 PasswordAuthenticationMethod passwordAuth = new PasswordAuthenticationMethod(Username, Password);
-                ConnectionInfo connectionInfo = new ConnectionInfo(Hostname, Port, Username, passwordAuth)
+                KeyboardInteractiveAuthenticationMethod keyboardAuth = new KeyboardInteractiveAuthenticationMethod(Username);
+                keyboardAuth.AuthenticationPrompt += (sender, e) =>
+                {
+                    foreach (AuthenticationPrompt prompt in e.Prompts)
+                    {
+                        Trace("Connect() sending keyboard interactive authentication password.");
+                        prompt.Response = Password;
+                    }
+                };
+                AuthenticationMethod[] authMethods = new AuthenticationMethod[] { passwordAuth, keyboardAuth };
+
+                ConnectionInfo connectionInfo = new ConnectionInfo(Hostname, Port, Username, authMethods)
                 {
                     Timeout = TimeSpan.FromSeconds(Timeout)
                 };
@@ -112,9 +125,13 @@ namespace ATC.Framework.Communications
 
                 // create shell stream
                 string terminalName = nameof(SshClientTransport);
-                ShellStream stream = client.CreateShellStream(terminalName, 80, 24, 800, 600, 1024);
-                stream.DataReceived += StreamDataReceivedHandler;
-                stream.ErrorOccurred += StreamErrorOccurredHandler;
+                stream = client.CreateShellStream(terminalName, 80, 24, 800, 600, 1024);
+                stream.DataReceived += (sender, e) => { ReadBuffer(e.Data, e.Data.Length); };
+                stream.ErrorOccurred += (sender, e) =>
+                {
+                    TraceError($"Connect() stream error occurred: {e.Exception.Message}");
+                    Dispose();
+                };
 
                 return true;
             }
@@ -140,12 +157,50 @@ namespace ATC.Framework.Communications
 
         public override bool Disconnect()
         {
-            throw new NotImplementedException();
+            if (ConnectionState == ConnectionState.NotConnected)
+            {
+                TraceError("Disconnect() not currently connected.");
+                return false;
+            }
+
+            Dispose();
+            return true;
         }
 
         public override bool Send(string s)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(s))
+            {
+                TraceError("Send() supplied string is null or empty.");
+                return false;
+            }
+            else if (stream == null || !stream.CanWrite)
+            {
+                TraceError("Send() stream is not available or is not writable.");
+                return false;
+            }
+
+            try
+            {
+                byte[] bytes = Encoding.GetBytes(s);
+                Trace($"Send() sending {bytes.Length} bytes, content: \"{s.ToControlCodeString()}\"");
+                stream.WriteAsync(bytes, 0, bytes.Length)
+                    .ContinueWith((task) =>
+                    {
+                        if (task.IsFaulted)
+                            TraceWarning("Send() error encountered while trying to send.");
+                        else
+                            Trace($"Send() completed write of {bytes.Length} bytes.");
+                    });
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                TraceException(ex, nameof(Send));
+                Dispose();
+                return false;
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -159,27 +214,9 @@ namespace ATC.Framework.Communications
                 client = null;
             }
 
+            stream = null;
+
             ConnectionState = ConnectionState.NotConnected;
-        }
-
-        #endregion
-
-        #region Event handlers
-
-        private void StreamDataReceivedHandler(object sender, ShellDataEventArgs e)
-        {
-            Trace($"StreamDataReceivedHandler() received {e.Data.Length} bytes.");
-            string response = Encoding.GetString(e.Data);
-            Trace($"StreamDataReceivedHandler() received string: \"{response.ToControlCodeString()}\"");
-
-            // raise event
-            RaiseResponseReceivedEvent(response);
-        }
-
-        private void StreamErrorOccurredHandler(object sender, ExceptionEventArgs e)
-        {
-            TraceError($"StreamDataReceivedHandler() stream error occurred: {e.Exception.Message}");
-            Dispose();
         }
 
         #endregion

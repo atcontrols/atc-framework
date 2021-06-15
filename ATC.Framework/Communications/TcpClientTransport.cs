@@ -154,39 +154,6 @@ namespace ATC.Framework.Communications
             return (true, string.Empty);
         }
 
-        private void ReadStream(NetworkStream stream)
-        {
-            byte[] buffer = new byte[4096];
-
-            try
-            {
-                int bytesRead;
-                while (stream.CanRead && (bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    // read string response from stream
-                    string response = Encoding.GetString(buffer, 0, bytesRead);
-                    Trace($"ReadStream() received {bytesRead} bytes.");
-                    ParseResponse(response);
-                }
-
-                TraceError("ReadStream() unable to read from stream.");
-                Dispose();
-            }
-            catch (Exception ex)
-            {
-                TraceException("ReadStream() exception caught.", ex);
-                Dispose();
-            }
-        }
-
-        protected virtual void ParseResponse(string response)
-        {
-            Trace($"ParseResponse() received string: \"{response.ToControlCodeString()}\"");
-
-            // raise event
-            RaiseResponseReceivedEvent(response);
-        }
-
         #endregion
 
         #region Object cleanup

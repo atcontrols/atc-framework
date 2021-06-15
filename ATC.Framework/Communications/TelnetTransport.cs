@@ -37,23 +37,31 @@ namespace ATC.Framework.Communications
 
         protected override void ParseResponse(string response)
         {
-            // check for incoming telnet negotation string
             if (response.StartsWith("\xFF") && !Negotiated)
             {
-                Trace($"ParseResponse() received negotiation line: \"{response.ToHexString()}\"");
+                // check for incoming telnet negotation string
+                if (response.StartsWith("\xFF") && !Negotiated)
+                {
+                    Trace($"ParseResponse() received negotiation line: \"{response.ToHexString()}\"");
 
-                // construct reply
-                string reply = response
-                    .Replace('\xFB', '\xFE') // replace will with don't
-                    .Replace('\xFD', '\xFC'); // replace do with won't
+                    // construct reply
+                    string reply = response
+                        .Replace('\xFB', '\xFE') // replace will with don't
+                        .Replace('\xFD', '\xFC'); // replace do with won't
 
-                // send response to server
-                Trace($"ParseResponse() sending negotiation response: \"{response.ToHexString()}\"");
-                Send(reply);
+                    // send response to server
+                    Trace($"ParseResponse() sending negotiation response: \"{response.ToHexString()}\"");
+                    Send(reply);
+                }
             }
             else
             {
-                Negotiated = true;
+                if (!Negotiated)
+                {
+                    TraceInfo("ProcessBytes() telnet negotiation completed.");
+                    Negotiated = true;
+                }
+
                 base.ParseResponse(response);
             }
         }
