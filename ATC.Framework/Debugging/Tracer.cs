@@ -175,7 +175,7 @@ namespace ATC.Framework.Debugging
 
             // append inner exception message (if it exists)
             if (ex.InnerException != null)
-                outputMessage += string.Format("\r\nInner exception message: \"{0}\"", ex.InnerException.Message);
+                outputMessage += $"\r\nInner exception - Type: {ex.InnerException.GetType().Name}, Message: \"{ex.InnerException.Message}\"";
 
             // exceptions are always outputted
             OutputMessage(Name, outputMessage, Category.Exception);
