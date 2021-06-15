@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ATC.Framework.Communications
 {
-    public interface ITransport : IConnectable
+    public interface ITransport : ISystemComponent, IConnectable
     {
         // properties
         bool AutoConnect { get; set; }
@@ -19,7 +19,7 @@ namespace ATC.Framework.Communications
         event EventHandler<ResponseReceivedEventArgs> ResponseReceivedCallback;
     }
 
-    public abstract class Transport : SystemComponent, ITransport, IDisposable
+    public abstract class Transport : SystemComponent, ITransport
     {
         #region Fields
 
@@ -231,26 +231,6 @@ namespace ATC.Framework.Communications
                 TraceException("RaiseResponseReceivedEvent() exception caught.", ex);
                 responseBuffer = null;
             }
-        }
-
-        #endregion
-
-        #region Object cleanup
-
-        /// <summary>
-        /// Free up any unmanaged resources.
-        /// </summary>
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected abstract void Dispose(bool disposing);
-
-        ~Transport()
-        {
-            Dispose(false);
         }
 
         #endregion

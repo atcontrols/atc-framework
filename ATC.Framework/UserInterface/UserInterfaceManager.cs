@@ -49,14 +49,13 @@ namespace ATC.Framework.UserInterface
         bool SetItemValue(uint smartObjectId, string name, string value);
     }
 
-    public class UserInterfaceManager<TPanel> : SystemComponent, IUserInterfaceManager, IDisposable
+    public class UserInterfaceManager<TPanel> : SystemComponent, IUserInterfaceManager
         where TPanel : BasicTriListWithSmartObject
     {
         #region Fields
 
         private readonly TPanel _panel;
         private readonly List<UserInterfaceComponent> components = new List<UserInterfaceComponent>();
-        private bool disposed;
 
         #endregion
 
@@ -160,28 +159,6 @@ namespace ATC.Framework.UserInterface
                 c.InvokeInitialize();
 
             return true;
-        }
-
-        /// <summary>
-        /// Unregister panel from control system and dispose of it.
-        /// </summary>
-        public void Dispose()
-        {
-            // remove event handlers
-            Panel.OnlineStatusChange -= OnlineEventHandler;
-            Panel.SigChange -= SigChangeHandler;
-            foreach (KeyValuePair<uint, SmartObject> pair in Panel.SmartObjects)
-                pair.Value.SigChange -= SmartObjectHandler;
-
-            var response = Panel.UnRegister();
-            if (response == eDeviceRegistrationUnRegistrationResponse.Success)
-                Trace("Dispose() succesfully unregistered panel.");
-            else
-                TraceError("Dispose() error occurred while trying to unregister: " + response);
-
-            Panel.Dispose();
-
-            disposed = true;
         }
 
         /// <summary>
@@ -304,6 +281,27 @@ namespace ATC.Framework.UserInterface
 
         #endregion
 
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (disposing)
+            {
+                // remove event handlers
+                Panel.OnlineStatusChange -= OnlineEventHandler;
+                Panel.SigChange -= SigChangeHandler;
+                foreach (KeyValuePair<uint, SmartObject> pair in Panel.SmartObjects)
+                    pair.Value.SigChange -= SmartObjectHandler;
+
+                var response = Panel.UnRegister();
+                if (response == eDeviceRegistrationUnRegistrationResponse.Success)
+                    Trace("Dispose() succesfully unregistered panel.");
+                else
+                    TraceError("Dispose() error occurred while trying to unregister: " + response);
+
+                Panel.Dispose();
+            }
+        }
+
         #region Panel event handlers
 
         protected virtual void OnlineEventHandler(GenericBase currentDevice, OnlineOfflineEventArgs args)
@@ -311,7 +309,7 @@ namespace ATC.Framework.UserInterface
             try
             {
                 // check if panel has been unregistered
-                if (disposed && !args.DeviceOnLine)
+                if (Disposed && !args.DeviceOnLine)
                 {
                     Trace("OnlineEventHandler() panel has been unregistered.");
                     return;

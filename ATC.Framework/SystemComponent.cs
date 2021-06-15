@@ -13,14 +13,12 @@ namespace ATC.Framework
         TraceLevel TraceLevel { get; set; }
     }
 
-    public abstract class SystemComponent : ISystemComponent
+    public abstract class SystemComponent : ISystemComponent, IDisposable
     {
         #region Fields
 
         private readonly Tracer tracer = new Tracer();
         private readonly static Dictionary<string, ISystemComponent> components = new Dictionary<string, ISystemComponent>();
-
-        private string _componentName;
 
         #endregion
 
@@ -35,13 +33,12 @@ namespace ATC.Framework
         [JsonIgnore]
         public virtual string ComponentName
         {
-            get { return _componentName; }
+            get => tracer.Name;
             set
             {
-                RemoveComponent(_componentName); // remove old reference to component
+                RemoveComponent(tracer.Name); // remove old reference to component
 
                 // update references
-                _componentName = value;
                 tracer.Name = value;
                 AddComponent(this);
             }
@@ -49,6 +46,13 @@ namespace ATC.Framework
 
         [JsonIgnore]
         public virtual TraceLevel TraceLevel { get; set; }
+
+        /// <summary>
+        /// Set to true once the Dispose method has been called.
+        /// </summary>
+        [JsonIgnore]
+        public bool Disposed { get; private set; }
+
         #endregion
 
         #region Constructor
@@ -63,6 +67,32 @@ namespace ATC.Framework
 
             ComponentName = name;
         }
+
+        #endregion
+
+        #region Object cleanup
+
+        /// <summary>
+        /// Free up any unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (Disposed)
+                return;
+
+            if (disposing)
+                RemoveComponent(ComponentName);
+
+            Disposed = true;
+        }
+
+        ~SystemComponent() => Dispose(false);
 
         #endregion
 
@@ -174,9 +204,12 @@ namespace ATC.Framework
         /// Add a component to the local cache.
         /// </summary>
         /// <param name="component">The component to add.</param>
-        public static void AddComponent(ISystemComponent component)
+        internal static void AddComponent(ISystemComponent component)
         {
             components[component.ComponentName] = component;
+#warning Does not check for duplicates
+            //components.Add(component.ComponentName, component);
+            Tracer.PrintLine($"Added {component.ComponentName} to system component collection. Total count is: {components.Count}");
         }
 
         /// <summary>
@@ -209,13 +242,17 @@ namespace ATC.Framework
         /// Remove a component from the local cache.
         /// </summary>
         /// <param name="name">The name of the component to remove.</param>
-        public static void RemoveComponent(string name)
+        private static void RemoveComponent(string name)
         {
             if (name == null)
                 return;
 
-            if (components.ContainsKey(name))
-                components.Remove(name);
+            bool result = components.Remove(name);
+            string message = result ?
+                $"Removed {name} from system component collection. Total count is: {components.Count}" :
+                $"Couln't find {name} in component collection - cannot remove.";
+
+            Tracer.PrintLine(message);
         }
 
         #endregion

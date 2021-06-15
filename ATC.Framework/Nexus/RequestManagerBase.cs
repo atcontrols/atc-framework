@@ -34,10 +34,13 @@ namespace ATC.Framework.Nexus
     internal abstract class RequestManagerBase : SystemComponent, IRequestManager
     {
         #region Fields
+
         protected readonly Queue<ApiRequest> requestQueue = new Queue<ApiRequest>();
+
         #endregion
 
         #region Properties
+
         /// <summary>
         /// The address of the API server (default: https://api.nexus.atcontrols.com.au)
         /// </summary>
@@ -62,9 +65,11 @@ namespace ATC.Framework.Nexus
         /// The system secret (password) to enable writing to the system.
         /// </summary>
         public string Secret { get; set; }
+
         #endregion
 
         #region Constructor
+
         public RequestManagerBase(string companyId, string groupId, string systemId, string secret, string apiUrl)
         {
             ApiUrl = apiUrl;
@@ -73,9 +78,11 @@ namespace ATC.Framework.Nexus
             SystemId = systemId;
             Secret = secret;
         }
+
         #endregion
 
         #region Public methods
+
         public void SendRequest(HttpMethod method, string url, string body)
         {
             requestQueue.Enqueue(new ApiRequest(method, url, body));
@@ -91,16 +98,10 @@ namespace ATC.Framework.Nexus
             string body = SerializeObject(obj);
             SendRequest(method, url, body);
         }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+        
         #endregion
 
         #region Protected methods
-        protected abstract void Dispose(bool disposing);
 
         protected abstract void SendNextRequest();
 
@@ -114,6 +115,7 @@ namespace ATC.Framework.Nexus
             if (requestQueue.Count > 0)
                 SendNextRequest();
         }
+
         #endregion
 
         #region Private methods

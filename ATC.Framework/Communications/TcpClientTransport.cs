@@ -163,6 +163,7 @@ namespace ATC.Framework.Communications
         /// </summary>
         protected override void Dispose(bool disposing)
         {
+            base.Dispose(disposing);
             if (disposing)
             {
                 if (client != null)

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace ATC.Framework.Nexus
 {
-    public class NexusSystemAgent : PollerComponent, IDisposable
+    public class NexusSystemAgent : PollerComponent
     {
         #region Fields
         private IRequestManager requestManager;
@@ -177,11 +177,7 @@ namespace ATC.Framework.Nexus
             foreach (Device device in devices)
                 AddDevice(device);
         }
-
-        public void Dispose()
-        {
-            requestManager.Dispose();
-        }
+        
         #endregion
 
         #region Private methods
@@ -251,6 +247,15 @@ namespace ATC.Framework.Nexus
             Tracer.ClearLogEntries();
         }
         #endregion
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (disposing)
+            {
+                requestManager.Dispose();
+            }
+        }
 
         #region Event handlers
 

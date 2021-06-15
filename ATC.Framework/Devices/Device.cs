@@ -46,7 +46,7 @@ namespace ATC.Framework.Devices
         event EventHandler<ErrorEventArgs> ErrorEventHandler;
     }
 
-    public abstract class Device : PollerComponent, IDevice, IDisposable
+    public abstract class Device : PollerComponent, IDevice
     {
         #region Fields
         private bool _online, _busy;
@@ -203,24 +203,13 @@ namespace ATC.Framework.Devices
         }
         #endregion
 
-        #region Object cleanup
-        /// <summary>
-        /// Clean up resources used by this device.
-        /// </summary>
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
                 BusyTimerCleanup();
             }
         }
-        #endregion
     }
 
     #region Event classes

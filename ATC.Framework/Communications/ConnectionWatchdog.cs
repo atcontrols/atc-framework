@@ -5,7 +5,7 @@ using System.Timers;
 
 namespace ATC.Framework.Communications
 {
-    public class ConnectionWatchdog : SystemComponent, IDisposable
+    public class ConnectionWatchdog : SystemComponent
     {
         #region Fields
 
@@ -95,12 +95,16 @@ namespace ATC.Framework.Communications
             Dispose();
         }
 
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            if (timer != null)
+            base.Dispose(disposing);
+            if (disposing)
             {
-                timer.Dispose();
-                timer = null;
+                if (timer != null)
+                {
+                    timer.Dispose();
+                    timer = null;
+                }
             }
         }
 

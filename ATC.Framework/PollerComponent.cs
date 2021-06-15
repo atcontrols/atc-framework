@@ -33,14 +33,7 @@ namespace ATC.Framework
             get => timer != null && timer.Enabled;
             set
             {
-                // dispose of existing timer
-                if (timer != null)
-                {
-                    Trace("PollingEnabled.set stopping existing timer.");
-                    timer.Stop();
-                    timer.Dispose();
-                    timer = null;
-                }
+                ResetTimer();
 
                 if (value)
                 {
@@ -88,6 +81,26 @@ namespace ATC.Framework
         {
             TraceWarning("PollingCallback() method getting called in PollerComponent class. You probably want to override this in your derived class.");
             return Task.CompletedTask;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (disposing)
+            {
+                ResetTimer();
+            }
+        }
+
+        private void ResetTimer()
+        {
+            if (timer != null)
+            {
+                Trace("ResetTimer() resetting existing polling timer.");
+                timer.Stop();
+                timer.Dispose();
+                timer = null;
+            }
         }
     }
 }
