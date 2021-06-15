@@ -1,30 +1,67 @@
-﻿using Crestron.SimplSharp;
-using System;
+﻿using System;
+using System.Threading.Tasks;
+using System.Timers;
+using ATC.Framework.Debugging;
 
 namespace ATC.Framework
 {
+    public interface IPollerComponent
+    {
+        bool PollingEnabled { get; set; }
+        long PollingInterval { get; set; }
+    }
+
     /// <summary>
     /// This class adds polling elements to SystemComponent class.
     /// </summary>
     public abstract class PollerComponent : SystemComponent, IPollerComponent
     {
-        #region Class variables
-        long pollingInterval;
-        CTimer pollingTimer;
-        #endregion
+        #region Fields
 
-        #region Constants
-        const long PollingIntervalDefault = 10000;
+        private long _interval = 10000;
+        private Timer timer;
+
         #endregion
 
         #region Properties
+
         /// <summary>
         /// Whether or not polling is enabled for this component.
         /// </summary>
         public bool PollingEnabled
         {
-            get { return pollingTimer != null; }
-            set { PollingEnable(value); }
+            get => timer != null && timer.Enabled;
+            set
+            {
+                // dispose of existing timer
+                if (timer != null)
+                {
+                    Trace("PollingEnabled.set stopping existing timer.");
+                    timer.Stop();
+                    timer.Dispose();
+                    timer = null;
+                }
+
+                if (value)
+                {
+                    Trace($"PollingEnable.set enabling polling with interval of: {PollingInterval}ms.");
+
+                    timer = new Timer(PollingInterval);
+                    timer.Elapsed += async (sender, e) =>
+                    {
+                        TraceInfo($"PollingEnable.set elapsed event at: {e.SignalTime} ", TraceLevel.Extended);
+                        try 
+                        { 
+                            await PollingCallback(); 
+                        }
+                        catch (Exception ex)
+                        {
+                            TraceException(ex, "PollingEnabled.set", "Exception occurred in polling callback method.");
+                        }
+                    };
+                    timer.Start();
+                }
+            }
         }
 
         /// <summary>
@@ -32,75 +69,25 @@ namespace ATC.Framework
         /// </summary>
         public long PollingInterval
         {
-            get { return pollingInterval; }
+            get => _interval;
             set
             {
                 if (value > 0)
                 {
-                    pollingInterval = value;
+                    _interval = value;
                     Trace("PollingInterval set to: " + value);
-                    if (PollingEnabled)
-                        PollingEnable(true);
-                }
-            }
-        }
-        #endregion
-
-        #region Constructor
-        public PollerComponent()
-        {
-            PollingInterval = PollingIntervalDefault;
-        }
-        #endregion
-
-        #region Internal methods
-        void PollingEnable(bool enable)
-        {
-            try
-            {
-                if (enable)
-                {
-                    if (PollingEnabled)
-                    {
-                        Trace("PollingEnable() restarting polling timer with new interval: " + pollingInterval);
-                        PollingTimerStop();
-                    }
-                    else
-                        Trace("PollingEnable() enabling polling.");
-
-
-                    pollingTimer = new CTimer(PollingCallback, null, pollingInterval, pollingInterval);
+                    PollingEnabled = PollingEnabled; // recall set method of PollingEnabled property
                 }
                 else
-                {
-                    Trace("PollingEnable() disabling polling.");
-                    PollingTimerStop();
-                }
-            }
-            catch (Exception ex)
-            {
-                TraceException("PollingEnable() exception caught.", ex);
-            }
-        }
-
-        abstract protected void PollingCallback(object o);
-
-        void PollingTimerStop()
-        {
-            if (pollingTimer != null)
-            {
-                Trace("PollingTimerStop() stopping existing timer.");
-                pollingTimer.Stop();
-                pollingTimer.Dispose();
-                pollingTimer = null;
+                    TraceError($"PollingInterval must be a positive value: {value}");
             }
         }
         #endregion
-    }
 
-    public interface IPollerComponent
-    {
-        bool PollingEnabled { get; set; }
-        long PollingInterval { get; set; }
+        protected virtual Task PollingCallback()
+        {
+            TraceWarning("PollingCallback() method getting called in PollerComponent class. You probably want to override this in your derived class.");
+            return Task.CompletedTask;
+        }
     }
 }

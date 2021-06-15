@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace ATC.Framework.Devices
 {
-    public interface IDevice : ISystemComponent
+    public interface IDevice : IPollerComponent
     {
         /// <summary>
         /// Unique identifier for this device
@@ -46,7 +46,7 @@ namespace ATC.Framework.Devices
         event EventHandler<ErrorEventArgs> ErrorEventHandler;
     }
 
-    public abstract class Device : SystemComponent, IDevice, IDisposable
+    public abstract class Device : PollerComponent, IDevice, IDisposable
     {
         #region Fields
         private bool _online, _busy;

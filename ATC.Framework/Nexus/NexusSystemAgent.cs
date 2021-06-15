@@ -1,6 +1,7 @@
 ﻿using ATC.Framework.Debugging;
 using ATC.Framework.Devices;
 using System;
+using System.Threading.Tasks;
 
 namespace ATC.Framework.Nexus
 {
@@ -252,26 +253,29 @@ namespace ATC.Framework.Nexus
         #endregion
 
         #region Event handlers
-        protected override void PollingCallback(object o)
+
+        protected override Task PollingCallback()
         {
             if (LoggingEnabled)
             {
                 if (!Tracer.OutputMemoryLog)
                 {
                     TraceWarning("PollingCallback() logging is enabled but the Tracer class does not have memory logging enabled. No action taken.");
-                    return;
+                    return Task.CompletedTask;
                 }
 
                 SendLogEntries();
             }
 
             deviceManager.SendDevices();
+            return Task.CompletedTask;
         }
 
         private void StateUpdateHandler(SystemState state)
         {
             SendSystemStateUpdate();
         }
+
         #endregion
     }
 }
